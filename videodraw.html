@@ -1,0 +1,1963 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Video Draw</title>
+<style>
+:root{
+  --bg:#2f2f2f; --panel:#3a3a3a; --panel-2:#333333; --chrome:#2b2b2b;
+  --line:rgba(255,255,255,.09); --line-2:rgba(255,255,255,.18);
+  --text:#e8e8e8; --text-dim:#9e9e9e;
+  --accent:#3596db; --accent-2:#2980b9; --accent-soft:rgba(53,150,219,.12);
+  --live:#5cb85c; --offline:#e35b5b;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+  font:13px/1.4 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+#app{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:250px 1fr 300px;height:100%}
+.bar{background:var(--chrome);display:flex;align-items:center;gap:4px;padding:5px 8px;flex-wrap:wrap}
+.top{grid-column:1/-1;border-bottom:1px solid var(--line)}
+.bottom{grid-column:1/-1;border-top:1px solid var(--line);font-size:12px;color:var(--text-dim);padding:3px 8px}
+.bottom .spacer{flex:1}
+.brand{font-weight:600;font-size:14px;margin-right:10px;letter-spacing:.1px}
+.brand small{font-weight:400;color:var(--text-dim);margin-left:6px;font-size:11px}
+.sep{width:1px;height:20px;background:var(--line-2);margin:0 5px}
+button{background:transparent;color:var(--text);border:1px solid transparent;border-radius:4px;padding:4px 9px;font:inherit;cursor:pointer;line-height:1.2}
+button:hover{background:var(--panel)}
+button.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.primary:hover{background:var(--accent-2)}
+button.danger{color:var(--offline)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button.small{padding:2px 6px;font-size:12px}
+kbd{font:11px inherit;color:var(--text-dim);border:1px solid var(--line-2);border-radius:3px;padding:0 4px;margin-left:4px}
+#palette{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+#palette .hd{padding:8px 10px 6px;border-bottom:1px solid var(--line)}
+#search{width:100%}
+#plist{overflow:auto;flex:1;padding:4px 0 10px}
+.pcat{font-size:11px;color:var(--text-dim);padding:10px 12px 3px}
+.pitem{display:flex;align-items:center;gap:10px;padding:5px 12px;cursor:grab;user-select:none;-webkit-user-select:none}
+.pitem:hover{background:var(--accent-soft)}
+.pitem svg{width:30px;height:30px;flex:none;stroke:var(--text-dim);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.pitem .nm{font-size:12.5px}
+.pitem .io{font-size:10.5px;color:var(--text-dim);margin-left:auto;white-space:nowrap}
+.empty{padding:14px 12px;color:var(--text-dim);font-size:12px}
+#canvasWrap{position:relative;overflow:hidden;background:var(--bg);min-width:0}
+svg#svg{width:100%;height:100%;display:block;touch-action:none;cursor:default;user-select:none;-webkit-user-select:none}
+svg#svg.tool-pan{cursor:grab}
+svg#svg.tool-draw{cursor:crosshair}
+svg#svg.dragging{cursor:grabbing}
+#ghost{position:fixed;pointer-events:none;z-index:50;background:var(--panel);border:1px solid var(--accent);border-radius:6px;padding:6px 10px;font-size:12px;display:none;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+#props{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:10px 12px 20px;min-width:0}
+#props h3{font-size:13px;font-weight:600;margin:4px 0 10px}
+#props h4{font-size:12px;font-weight:600;color:var(--text-dim);margin:14px 0 6px}
+.field{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:6px;margin:6px 0}
+.field label{color:var(--text-dim);font-size:12px}
+.row{display:flex;gap:6px;align-items:center}
+.row > *{min-width:0}
+input,select,textarea{background:var(--panel-2);color:var(--text);border:1px solid var(--line-2);border-radius:4px;padding:4px 6px;font:inherit;width:100%}
+input[type=number]{width:100%}
+input[type=color]{padding:0 2px;height:26px;width:40px;flex:none}
+input[type=checkbox]{width:auto}
+textarea{resize:vertical;min-height:60px}
+table.ports{width:100%;border-collapse:collapse;font-size:12px}
+table.ports th{text-align:left;color:var(--text-dim);font-weight:400;padding:2px 3px}
+table.ports td{padding:2px 3px}
+table.ports input{padding:3px 5px;font-size:12px}
+.hint{color:var(--text-dim);font-size:11.5px;margin:6px 0}
+.actions{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--panel-2);border:1px solid var(--line-2);border-radius:12px;padding:1px 4px 1px 8px;font-size:11.5px}
+.chip button{padding:0 5px;color:var(--text-dim)}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line-2);border-radius:8px;padding:16px 18px;width:380px;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h3{margin:0 0 12px;font-size:14px}
+dialog .actions{justify-content:flex-end}
+#toast{position:fixed;bottom:34px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line-2);color:var(--text);padding:6px 12px;border-radius:6px;font-size:12px;opacity:0;transition:opacity .15s;pointer-events:none;z-index:60}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+@media (max-width:900px){#app{grid-template-columns:180px 1fr 240px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="bar top">
+    <span class="brand">Video Draw<small>signal path diagrams</small></span>
+    <button data-act="new">New</button>
+    <button data-act="open">Open</button>
+    <button data-act="save">Save</button>
+    <span class="sep"></span>
+    <button data-act="undo" title="Undo (Ctrl+Z)">Undo</button>
+    <button data-act="redo" title="Redo (Ctrl+Y)">Redo</button>
+    <span class="sep"></span>
+    <button data-tool="select" class="on" title="Select and move (V)">Select</button>
+    <button data-tool="pan" title="Pan the canvas (H, or hold Space)">Pan</button>
+    <button data-tool="rect" title="Draw a rectangle (R)">Rectangle</button>
+    <button data-tool="ellipse" title="Draw an ellipse (E)">Ellipse</button>
+    <button data-tool="line" title="Draw a line (L)">Line</button>
+    <button data-tool="text" title="Place a text box (T)">Text</button>
+    <span class="sep"></span>
+    <button data-act="arrange" title="Auto arrange: layers left to right (landscape)">Arrange linear</button>
+    <button data-act="arrangeFan" title="Auto arrange for portrait pages: hubs step down the page, single-port devices gather around the hub they connect to">Arrange portrait</button>
+    <button data-act="clearPaths" title="Remove every signal path, keeping icons and shapes">Delete all paths</button>
+    <button data-act="grid" id="btnGrid" class="on" title="Show grid (G)">Grid</button>
+    <button data-act="snap" id="btnSnap" class="on" title="Snap to grid (S)">Snap</button>
+    <span class="sep"></span>
+    <button data-act="export" class="primary">Export</button>
+    <span class="sep"></span>
+    <button data-act="theme" id="btnTheme" title="Switch between dark and light mode">Light mode</button>
+  </header>
+
+  <aside id="palette">
+    <div class="hd"><input id="search" type="search" placeholder="Search icons" autocomplete="off"></div>
+    <div id="plist"></div>
+  </aside>
+
+  <div id="canvasWrap">
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg">
+      <g id="world">
+        <g class="lGrid"></g><g class="lShapes"></g><g class="lEdges"></g><g class="lNodes"></g><g class="lOverlay"></g>
+      </g>
+    </svg>
+    <div id="ghost"></div>
+  </div>
+
+  <aside id="props"></aside>
+
+  <footer class="bar bottom">
+    <span id="status">Ready</span>
+    <span class="spacer"></span>
+    <span id="hint">Drag from a port to connect. Drop a connection onto an existing line to bundle it.</span>
+    <span class="sep"></span>
+    <button class="small" data-act="zoomOut">−</button>
+    <span id="zoomLbl" style="min-width:42px;text-align:center">100%</span>
+    <button class="small" data-act="zoomIn">+</button>
+    <button class="small" data-act="fit" title="Fit the whole diagram">Fit</button>
+    <button class="small" data-act="zoomSel" title="Zoom to the selected items (Z)">Zoom to selection</button>
+  </footer>
+</div>
+
+<dialog id="dlgExport">
+  <h3>Export diagram</h3>
+  <div class="field"><label>Format</label><select id="exFmt"><option value="png">PNG image</option><option value="pdf">PDF</option></select></div>
+  <div class="field"><label>Print theme</label><select id="exTheme"><option value="light">Light</option><option value="dark">Dark</option></select></div>
+  <div class="field"><label>Page size</label><select id="exPage">
+    <option value="auto">Diagram size (no page)</option>
+    <option value="letter">Letter 8.5 × 11 in</option>
+    <option value="legal">Legal 8.5 × 14 in</option>
+    <option value="tabloid">Tabloid 11 × 17 in</option>
+    <option value="a4">A4 210 × 297 mm</option>
+    <option value="a3">A3 297 × 420 mm</option>
+    <option value="a5">A5 148 × 210 mm</option>
+  </select></div>
+  <div class="field exPageOpt"><label>Orientation</label><select id="exOrient"><option value="auto">Match diagram</option><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></div>
+  <div class="field exPageOpt"><label>Fit to page</label><label class="row"><input type="checkbox" id="exFit" checked> scale the diagram to fill the printable area</label></div>
+  <div class="field exPageOpt"><label>Margin</label><select id="exMargin"><option value="0.5">0.5 in</option><option value="1" selected>1 in</option></select></div>
+  <div class="field"><label>Resolution</label><select id="exDpi"><option value="150">150 dpi</option><option value="300" selected>300 dpi</option><option value="600">600 dpi</option></select></div>
+  <div class="field"><label>Grid</label><input type="checkbox" id="exGrid"></div>
+  <div class="field" id="exTransRow"><label>Background</label><label class="row"><input type="checkbox" id="exTrans"> transparent (PNG only)</label></div>
+  <div class="hint" id="exInfo"></div>
+  <div class="actions"><button data-act="exCancel">Cancel</button><button class="primary" data-act="exGo">Export</button></div>
+</dialog>
+
+<input type="file" id="fileOpen" accept=".json,application/json" hidden>
+<div id="toast"></div>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const NS = 'http://www.w3.org/2000/svg';
+const NODE_W = 200, HEAD = 26, PITCH = 20, PAD = 14, STUB = 24, G = 10, MARGIN = 14, TURN = 12, TB = 16;
+const FONT = '-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+let uidCounter = 1;
+const nid = () => 'k' + (uidCounter++).toString(36) + Math.random().toString(36).slice(2, 6);
+
+const THEMES = {
+  dark: { bg:'#2f2f2f', panel:'#3a3a3a', panel2:'#333333', chrome:'#2b2b2b',
+    line:'rgba(255,255,255,.09)', line2:'rgba(255,255,255,.18)', text:'#e8e8e8', dim:'#9e9e9e',
+    accent:'#3596db', accent2:'#2980b9', soft:'rgba(53,150,219,.12)', live:'#5cb85c', offline:'#e35b5b',
+    grid:'rgba(255,255,255,.07)', paper:'#2f2f2f', warn:'#f2c230' },
+  light: { bg:'#c6c6c6', panel:'#dcdcdc', panel2:'#ebebeb', chrome:'#d2d2d2',
+    line:'rgba(0,0,0,.12)', line2:'rgba(0,0,0,.26)', text:'#1e1e1e', dim:'#5e5e5e',
+    accent:'#2980b9', accent2:'#1f6a9a', soft:'rgba(41,128,185,.12)', live:'#3f9a3f', offline:'#c94444',
+    grid:'rgba(0,0,0,.09)', paper:'#ffffff', warn:'#d9a400' }
+};
+const CSS_MAP = { bg:'--bg', panel:'--panel', panel2:'--panel-2', chrome:'--chrome', line:'--line', line2:'--line-2',
+  text:'--text', dim:'--text-dim', accent:'--accent', accent2:'--accent-2', soft:'--accent-soft', live:'--live', offline:'--offline' };
+
+// Icon primitives. inputs/outputs = defaults; cfg = user can change counts.
+const TYPES = {
+  camera:    { name:'Camera',             cat:'Sources',    inputs:0, outputs:1, icon:'camera' },
+  computer:  { name:'Computer',           cat:'Sources',    inputs:0, outputs:1, cfgOut:true, icon:'computer' },
+  gin:       { name:'Generic input',      cat:'Generic',    inputs:0, outputs:1, icon:'gin' },
+  gout:      { name:'Generic output',     cat:'Generic',    inputs:1, outputs:0, icon:'gout' },
+  router:    { name:'Router matrix',      cat:'Switching',  inputs:8, outputs:8, cfgIn:true, cfgOut:true, icon:'router' },
+  vswitch:   { name:'Video switch',       cat:'Switching',  inputs:8, outputs:2, cfgIn:true, cfgOut:true, icon:'vswitch', outLabels:['Program','Multiview'] },
+  atem1:     { name:'ATEM 1 Constellation', cat:'Switching', inputs:10, outputs:9, icon:'atem1',
+               outLabels:['OUT 1','OUT 2','OUT 3','OUT 4','OUT 5','OUT 6','Multiview','Audio L','Audio R'] },
+  atemmini:  { name:'ATEM Mini',          cat:'Switching',  inputs:4, outputs:2, icon:'atemmini' },
+  da:        { name:'DA',                 cat:'Distribution', inputs:1, outputs:8, cfgOut:true, icon:'da' },
+  conv:      { name:'SDI / HDMI converter', cat:'Distribution', inputs:1, outputs:1, cfgIn:true, cfgOut:true, icon:'conv' },
+  hyperdeck: { name:'HyperDeck Studio',   cat:'Recording',  inputs:1, outputs:2, icon:'hyperdeck',
+               inLabels:['SDI IN'], outLabels:['HDMI OUT','SDI OUT'] },
+  recorder:  { name:'Recorder',           cat:'Recording',  inputs:1, outputs:0, cfgIn:true, cfgOut:true, icon:'recorder' },
+  tv:        { name:'TV',                 cat:'Displays',   inputs:1, outputs:0, cfgIn:true, cfgOut:true, icon:'tv' },
+  projector: { name:'Projector',          cat:'Displays',   inputs:1, outputs:0, cfgIn:true, cfgOut:true, icon:'projector' },
+  monitor:   { name:'Monitor',            cat:'Displays',   inputs:1, outputs:0, cfgIn:true, cfgOut:true, icon:'monitor' },
+};
+const CAT_ORDER = ['Sources','Switching','Distribution','Recording','Displays','Generic'];
+
+// 40x40 line-art glyphs, stroke = currentColor
+const ICONS = {
+  camera: '<rect x="5" y="14" width="20" height="14" rx="2"/><path d="M25 19l10-5v12l-10-5z"/><circle cx="15" cy="21" r="4"/><path d="M9 14V9h8"/>',
+  computer: '<rect x="6" y="8" width="28" height="18" rx="2"/><path d="M20 26v5M13 31h14"/><path d="M11 13h6" opacity=".6"/>',
+  gin: '<path d="M8 11v18"/><path d="M8 20h24M27 15l5 5-5 5"/>',
+  gout: '<path d="M32 11v18"/><path d="M6 20h22M23 15l5 5-5 5"/>',
+  da: '<path d="M4 20h10"/><path d="M14 20h22M14 20l10-9h12M14 20l10 9h12M14 20l10-4h12M14 20l10 4h12"/>',
+  router: '<path d="M8 12h24M8 20h24M8 28h24M12 8v24M20 8v24M28 8v24"/><circle cx="12" cy="20" r="2.2" fill="currentColor"/><circle cx="20" cy="12" r="2.2" fill="currentColor"/><circle cx="28" cy="28" r="2.2" fill="currentColor"/>',
+  vswitch: '<path d="M5 12h9l10 8h10M5 20h9M5 28h9l10-8"/><circle cx="24" cy="20" r="2.4" fill="currentColor"/>',
+  tv: '<rect x="6" y="11" width="28" height="19" rx="2"/><path d="M13 34h14M14 11l6-6 6 6"/>',
+  projector: '<rect x="5" y="14" width="22" height="12" rx="2"/><circle cx="21" cy="20" r="3"/><path d="M27 17l8-4v14l-8-4M9 26v4M23 26v4"/>',
+  monitor: '<rect x="6" y="8" width="28" height="18" rx="2"/><path d="M20 26v5M13 31h14M6 22h28"/>',
+  recorder: '<rect x="5" y="10" width="30" height="20" rx="2"/><circle cx="14" cy="20" r="4"/><circle cx="26" cy="20" r="4"/><path d="M14 25h12"/>',
+  conv: '<rect x="5" y="12" width="30" height="16" rx="2"/><path d="M10 17h14l-3-3M24 17l-3 3M30 23H16l3-3M16 23l3 3"/>',
+  atem1: '<rect x="3" y="14" width="34" height="12" rx="1"/><path d="M7 18h2M11 18h2M15 18h2M19 18h2M23 18h2M7 22h2M11 22h2M15 22h2M19 22h2M23 22h2"/><rect x="29" y="17" width="5" height="6"/>',
+  hyperdeck: '<rect x="3" y="14" width="34" height="12" rx="1"/><rect x="6" y="17" width="12" height="6"/><circle cx="30" cy="20" r="3"/><path d="M21 18h5M21 22h5"/>',
+  atemmini: '<rect x="4" y="12" width="32" height="16" rx="2"/><path d="M8 17h3M13 17h3M18 17h3M23 17h3M8 23h3M13 23h3M18 23h3"/><rect x="29" y="16" width="4" height="9"/>',
+};
+function iconSvg(key, cls) {
+  return '<svg viewBox="0 0 40 40" class="' + (cls || '') + '">' + ICONS[key] + '</svg>';
+}
+
+// ---------- document state ----------
+let state = blankDoc();
+function blankDoc() {
+  return { title:'Untitled diagram', nodes:[], edges:[], shapes:[], grid:20, showGrid:true, snap:true,
+    defaults:{ stroke:'auto', width:2, dash:'solid' } };
+}
+const ui = { theme:'dark', tool:'select', sel:new Set(), view:{ x:80, y:80, z:1 }, hoverPort:null, space:false };
+let routes = new Map();
+const undoStack = [], redoStack = [];
+
+function pushUndo() { undoStack.push(JSON.stringify(state)); if (undoStack.length > 120) undoStack.shift(); redoStack.length = 0; }
+function undo() { if (!undoStack.length) return; redoStack.push(JSON.stringify(state)); state = JSON.parse(undoStack.pop()); pruneSelection(); refresh(true); }
+function redo() { if (!redoStack.length) return; undoStack.push(JSON.stringify(state)); state = JSON.parse(redoStack.pop()); pruneSelection(); refresh(true); }
+
+function snap(v) { return state.snap ? Math.round(v / state.grid) * state.grid : Math.round(v); }
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+// ---------- ports & nodes ----------
+function defaultLabel(side, i, n) {
+  const base = side === 'in' ? 'IN' : 'OUT';
+  return n === 1 ? base : base + ' ' + (i + 1);
+}
+function makePorts(t, side, n, old) {
+  const preset = side === 'in' ? t.inLabels : t.outLabels;
+  const arr = [];
+  for (let i = 0; i < n; i++) {
+    const o = old && old[i];
+    arr.push({ id: o ? o.id : nid(), label: o ? o.label : ((preset && preset[i]) || defaultLabel(side, i, n)), sig: o ? o.sig : '' });
+  }
+  return arr;
+}
+const SIDE_DIR = { right: 0, bottom: 1, left: 2, top: 3 };           // outward direction of each node side (E S W N)
+function portSide(n, io) {
+  const list = io === 'in' ? n.inputs : n.outputs;
+  const want = n.sides && n.sides[io];
+  if (list.length === 1 && want && SIDE_DIR[want] != null) return want;
+  return io === 'in' ? 'left' : 'right';
+}
+function nodeLayout(n) {
+  const inS = portSide(n, 'in'), outS = portSide(n, 'out');
+  const rowsIn = (inS === 'left' || inS === 'right') ? n.inputs.length : 0;
+  const rowsOut = (outS === 'left' || outS === 'right') ? n.outputs.length : 0;
+  const top = inS === 'top' || outS === 'top', bottom = inS === 'bottom' || outS === 'bottom';
+  return { inS, outS, rows: Math.max(rowsIn, rowsOut, 1), top, bottom };
+}
+// Port centres always land on the same 20px phase (node.y + 50 + 20k), so any two ports can be
+// brought level by moving an icon on the snap grid.
+function sizeNode(n) {
+  n.w = NODE_W;
+  const L = nodeLayout(n);
+  n.h = HEAD + 2 * PAD + L.rows * PITCH + (L.top ? TB : 0) + (L.bottom ? TB : 0);
+}
+function createNode(type, x, y) {
+  const t = TYPES[type];
+  const n = { id: nid(), type, x, y, name: t.name, inputs: makePorts(t, 'in', t.inputs), outputs: makePorts(t, 'out', t.outputs), sides: { in: 'left', out: 'right' } };
+  sizeNode(n);
+  return n;
+}
+function setPortCount(n, side, count) {
+  const t = TYPES[n.type];
+  count = clamp(Math.round(count), 0, 64);
+  const key = side === 'in' ? 'inputs' : 'outputs';
+  const old = n[key];
+  n[key] = makePorts(t, side, count, old);
+  const removed = new Set(old.slice(count).map(p => p.id));
+  if (removed.size) {
+    for (const e of state.edges) { e.a = e.a.filter(pid => !removed.has(pid)); e.b = e.b.filter(pid => !removed.has(pid)); }
+    state.edges = state.edges.filter(e => hasReal(e.a) && hasReal(e.b));
+  }
+  sizeNode(n);
+}
+function portPos(n, io, i) {
+  const L = nodeLayout(n);
+  const side = io === 'in' ? L.inS : L.outS;
+  if (side === 'top') return { x: n.x + n.w / 2, y: n.y, side };
+  if (side === 'bottom') return { x: n.x + n.w / 2, y: n.y + n.h, side };
+  const list = io === 'in' ? n.inputs : n.outputs;
+  const top = n.y + HEAD + PAD + (L.top ? TB : 0) + Math.floor((L.rows - list.length) / 2) * PITCH;
+  return { x: side === 'left' ? n.x : n.x + n.w, y: top + PITCH * (i + 0.5), side };
+}
+function labelExt(port, side) { return (port.sig && (side === 'left' || side === 'right')) ? Math.ceil(port.sig.length * 5.4 + 8) : 0; }
+function nodeLabelExt(n, io) { const side = portSide(n, io); return Math.max(0, ...(io === 'in' ? n.inputs : n.outputs).map(p => labelExt(p, side))); }
+const isPending = ref => typeof ref === 'string' && ref.startsWith('pending:');
+const hasReal = list => list.some(r => !isPending(r));
+function findPort(pid) {
+  for (const n of state.nodes) {
+    let i = n.inputs.findIndex(p => p.id === pid);
+    if (i >= 0) return { node: n, side: 'in', index: i, port: n.inputs[i] };
+    i = n.outputs.findIndex(p => p.id === pid);
+    if (i >= 0) return { node: n, side: 'out', index: i, port: n.outputs[i] };
+  }
+  return null;
+}
+function nodeById(id) { return state.nodes.find(n => n.id === id); }
+function edgeById(id) { return state.edges.find(e => e.id === id); }
+function shapeById(id) { return state.shapes.find(s => s.id === id); }
+function itemById(id) { return nodeById(id) || edgeById(id) || shapeById(id); }
+function shapeBox(s) {
+  if (s.kind === 'line') return { x: Math.min(s.x, s.x2), y: Math.min(s.y, s.y2), w: Math.abs(s.x2 - s.x), h: Math.abs(s.y2 - s.y) };
+  return { x: s.x, y: s.y, w: s.w, h: s.h };
+}
+function pruneSelection() {
+  for (const id of Array.from(ui.sel)) if (!itemById(id)) ui.sel.delete(id);
+}
+function dashArray(dash, w) {
+  if (dash === 'dashed') return (w * 4) + ' ' + (w * 3);
+  if (dash === 'dotted') return w + ' ' + (w * 2.2);
+  if (dash === 'dashdot') return (w * 5) + ' ' + (w * 2.5) + ' ' + w + ' ' + (w * 2.5);
+  return null;
+}
+function colorOf(c, th) { return (!c || c === 'auto') ? th.text : c; }
+// ---------- orthogonal routing ----------
+const DX = [1, 0, -1, 0], DY = [0, 1, 0, -1]; // E S W N
+const OVERLAP = 4, CROSS = 30;
+
+class Heap {
+  constructor() { this.k = []; this.v = []; }
+  push(key, val) { const k = this.k, v = this.v; k.push(key); v.push(val); let i = k.length - 1;
+    while (i > 0) { const p = (i - 1) >> 1; if (k[p] <= k[i]) break; [k[p], k[i]] = [k[i], k[p]]; [v[p], v[i]] = [v[i], v[p]]; i = p; } }
+  pop() { const k = this.k, v = this.v; const top = v[0]; const lk = k.pop(), lv = v.pop();
+    if (k.length) { k[0] = lk; v[0] = lv; let i = 0; const n = k.length;
+      for (;;) { let l = 2 * i + 1, r = l + 1, m = i; if (l < n && k[l] < k[m]) m = l; if (r < n && k[r] < k[m]) m = r; if (m === i) break;
+        [k[m], k[i]] = [k[i], k[m]]; [v[m], v[i]] = [v[i], v[m]]; i = m; } }
+    return top; }
+  get size() { return this.k.length; }
+}
+
+function buildGrid() {
+  let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+  const add = (x, y, w, h) => { minx = Math.min(minx, x); miny = Math.min(miny, y); maxx = Math.max(maxx, x + w); maxy = Math.max(maxy, y + h); };
+  for (const n of state.nodes) add(n.x, n.y, n.w, n.h);
+  for (const s of state.shapes) { const b = shapeBox(s); add(b.x, b.y, b.w, b.h); }
+  if (minx === Infinity) return null;
+  const PAD = 260;
+  minx = Math.floor((minx - PAD) / G) * G; miny = Math.floor((miny - PAD) / G) * G;
+  maxx = Math.ceil((maxx + PAD) / G) * G; maxy = Math.ceil((maxy + PAD) / G) * G;
+  const cols = Math.round((maxx - minx) / G) + 1, rows = Math.round((maxy - miny) / G) + 1;
+  const N = cols * rows;
+  const grid = { cols, rows, minx, miny, blocked: new Uint8Array(N), usedH: new Uint8Array(N), usedV: new Uint8Array(N), adj: new Uint8Array(N), near: new Uint8Array(N),
+    g: new Float64Array(N * 4), came: new Int32Array(N * 4), closed: new Uint8Array(N * 4) };
+  const mark = (arr, x0, y0, x1, y1) => {
+    const cx0 = clamp(Math.ceil((x0 - minx) / G), 0, cols - 1), cx1 = clamp(Math.floor((x1 - minx) / G), 0, cols - 1);
+    const cy0 = clamp(Math.ceil((y0 - miny) / G), 0, rows - 1), cy1 = clamp(Math.floor((y1 - miny) / G), 0, rows - 1);
+    for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) arr[cy * cols + cx] = 1;
+  };
+  const boxes = state.nodes.map(n => [n.x, n.y, n.x + n.w, n.y + n.h]); // drawn shapes are annotation: paths ignore them
+  // cells close to an icon cost extra, so vertical runs settle in the corridor between icons instead of hugging the labels
+  for (const b of boxes) mark(grid.near, b[0] - MARGIN - 40, b[1] - MARGIN - 40, b[2] + MARGIN + 40, b[3] + MARGIN + 40);
+  for (const b of boxes) mark(grid.blocked, b[0] - MARGIN, b[1] - MARGIN, b[2] + MARGIN, b[3] + MARGIN);
+  grid.toCell = (x, y) => [clamp(Math.round((x - minx) / G), 0, cols - 1), clamp(Math.round((y - miny) / G), 0, rows - 1)];
+  grid.toPt = (cx, cy) => ({ x: minx + cx * G, y: miny + cy * G });
+  return grid;
+}
+
+function astar(grid, s, e, sdir, edir, soft) {
+  const { cols, rows, blocked, usedH, usedV, adj, near, g, came, closed } = grid;
+  g.fill(Infinity); came.fill(-1); closed.fill(0);
+  const sCell = s[1] * cols + s[0], eCell = e[1] * cols + e[0];
+  const h = c => Math.abs((c % cols) - e[0]) + Math.abs(((c / cols) | 0) - e[1]);
+  const heap = new Heap();
+  const sIdx = sCell * 4 + sdir; g[sIdx] = 0; heap.push(h(sCell), sIdx);
+  let expanded = 0;
+  while (heap.size) {
+    const idx = heap.pop();
+    if (closed[idx]) continue;
+    closed[idx] = 1;
+    const cell = idx >> 2, dir = idx & 3;
+    if (cell === eCell && (edir < 0 || dir === edir)) {
+      const cells = []; let i = idx; while (i >= 0) { cells.push(i >> 2); i = came[i]; }
+      return cells.reverse();
+    }
+    if (++expanded > 400000) return null;
+    const x = cell % cols, y = (cell - x) / cols;
+    for (let d = 0; d < 4; d++) {
+      if (d === ((dir + 2) & 3)) continue;
+      const nx = x + DX[d], ny = y + DY[d];
+      if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+      const nc = ny * cols + nx;
+      const hardBlocked = blocked[nc] && nc !== eCell && nc !== sCell;
+      if (hardBlocked && !soft) continue;
+      const nIdx = nc * 4 + d;
+      if (closed[nIdx]) continue;
+      // running along another path costs a little; crossing one costs a lot; in soft mode icons cost a lot more
+      const along = (d & 1) ? usedV[nc] : usedH[nc], across = (d & 1) ? usedH[nc] : usedV[nc];
+      const cost = g[idx] + 1 + (d !== dir ? TURN : 0) + along * OVERLAP + across * CROSS + adj[nc] + near[nc] * 2 + (hardBlocked ? 150 : 0);
+      if (cost < g[nIdx]) { g[nIdx] = cost; came[nIdx] = idx; heap.push(cost + h(nc), nIdx); }
+    }
+  }
+  return null;
+}
+
+function endGeom(edge, key) {
+  const refs = edge[key].map(r => isPending(r) ? null : findPort(r)).filter(Boolean);
+  const pending = edge[key].filter(isPending);
+  if (!refs.length) return null;
+  const pts = refs.map(r => portPos(r.node, r.side, r.index));
+  const out = refs[0].side === 'out';
+  const outward = SIDE_DIR[pts[0].side];
+  const dir = out ? outward : (outward + 2) & 3;          // heading when leaving (out) or arriving (in)
+  const vx = DX[outward], vy = DY[outward];
+  const ext = Math.max(...refs.map((r, i) => labelExt(r.port, pts[i].side)));   // room for outside signal labels
+  if (refs.length === 1 && !pending.length) {
+    const p = pts[0];
+    return { ports: pts, tip: { x: p.x + vx * (STUB + ext), y: p.y + vy * STUB }, out, dir, single: true, pending: 0, inward: { x: -vx, y: -vy } };
+  }
+  const sgn = outward === 0 ? 1 : outward === 2 ? -1 : (out ? 1 : -1);
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const edgeX = sgn > 0 ? Math.max(...xs) : Math.min(...xs);
+  const cx = edgeX + sgn * (STUB + 8 + ext);
+  let y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const stubs = [];
+  for (const ref of pending) { y1 += PITCH; stubs.push({ x: cx, y: y1, cx, ref }); }   // open slots extend the collector, away from the icon
+  // leave a collector heading away from the icon; arrive at one heading toward it
+  const cdir = out ? (sgn > 0 ? 0 : 2) : (sgn > 0 ? 2 : 0);
+  return { ports: pts, tip: { x: cx, y: Math.round((y0 + y1) / 2) }, collector: { x: cx, y0, y1 }, out, dir: cdir, single: false, pending: pending.length, stubs, inward: { x: -sgn, y: 0 } };
+}
+function simplify(pts) {
+  const out = [];
+  for (const p of pts) {
+    const q = { x: Math.round(p.x * 100) / 100, y: Math.round(p.y * 100) / 100 };
+    if (out.length && Math.abs(out[out.length - 1].x - q.x) < 0.01 && Math.abs(out[out.length - 1].y - q.y) < 0.01) continue;
+    if (out.length >= 2) {
+      const a = out[out.length - 2], b = out[out.length - 1];
+      if ((Math.abs(a.x - b.x) < 0.01 && Math.abs(b.x - q.x) < 0.01) || (Math.abs(a.y - b.y) < 0.01 && Math.abs(b.y - q.y) < 0.01)) { out[out.length - 1] = q; continue; }
+    }
+    out.push(q);
+  }
+  return out;
+}
+
+function zRoute(p0, p1) {
+  if (Math.abs(p0.y - p1.y) < 0.5 || Math.abs(p0.x - p1.x) < 0.5) return [p0, p1];
+  if (p1.x >= p0.x + 20) { const mx = Math.round((p0.x + p1.x) / 2); return [p0, { x: mx, y: p0.y }, { x: mx, y: p1.y }, p1]; }
+  const my = Math.round((p0.y + p1.y) / 2);
+  return [p0, { x: p0.x, y: my }, { x: p1.x, y: my }, p1];
+}
+
+function trunkRoute(grid, A, B) {
+  const p0 = A.tip, p1 = B.tip;
+  const sdir = A.dir, edir = B.dir;
+  // the stub between a port and its tip (where the outside label sits) is off limits, so a path never doubles back over it
+  const blockedNow = [];
+  if (grid) for (const side of [A, B]) {
+    if (!side.single) continue;
+    const p = side.ports[0], t = side.tip;
+    const a = grid.toCell(p.x, p.y), b = grid.toCell(t.x, t.y);
+    const sx = Math.sign(b[0] - a[0]), sy = Math.sign(b[1] - a[1]);
+    let x = a[0], y = a[1];
+    while (!(x === b[0] && y === b[1])) {
+      for (const [dx, dy] of [[0, 0], [sy, sx], [-sy, -sx]]) { // one cell either side too
+        const cx = x + dx, cy = y + dy; if (cx < 0 || cy < 0 || cx >= grid.cols || cy >= grid.rows) continue;
+        const c = cy * grid.cols + cx; if (!grid.blocked[c]) { grid.blocked[c] = 1; blockedNow.push(c); }
+      }
+      x += sx; y += sy;
+    }
+  }
+  const s0 = grid ? grid.toCell(p0.x, p0.y) : null, s1 = grid ? grid.toCell(p1.x, p1.y) : null;
+  let cells = grid ? astar(grid, s0, s1, sdir, edir) : null;
+  if (!cells) cells = grid ? astar(grid, s0, s1, sdir, -1) : null;
+  // boxed in (e.g. a port facing an icon placed right against it): take the path that trespasses the least
+  if (!cells) cells = grid ? astar(grid, s0, s1, sdir, edir, true) : null;
+  for (const c of blockedNow) grid.blocked[c] = 0;
+  if (!cells || cells.length < 2) return { pts: zRoute(p0, p1) };
+  const P = cells.map(c => grid.toPt(c % grid.cols, (c / grid.cols) | 0));
+  // first run: pin to the exact start coordinate
+  const runDir = (a, b) => (Math.abs(a.y - b.y) < 0.5 ? 'h' : 'v');
+  let k = 1; const d0 = runDir(P[0], P[1]);
+  while (k + 1 < P.length && runDir(P[k], P[k + 1]) === d0) k++;
+  if (k === P.length - 1) return { pts: zRoute(p0, p1) }; // a single straight run: just join the tips
+  for (let i = 0; i <= k; i++) { if (d0 === 'h') P[i].y = p0.y; else P[i].x = p0.x; }
+  // last run: pin to the exact end coordinate
+  let j = P.length - 2; const d1 = runDir(P[P.length - 1], P[P.length - 2]);
+  while (j - 1 >= k && runDir(P[j], P[j - 1]) === d1) j--;
+  for (let i = P.length - 1; i >= j; i--) { if (d1 === 'h') P[i].y = p1.y; else P[i].x = p1.x; }
+  P[0] = { x: p0.x, y: p0.y };
+  P[P.length - 1] = { x: p1.x, y: p1.y };
+  let pts = simplify(P);
+  if (pts.length === 2 && Math.abs(pts[0].y - pts[1].y) > 0.5 && Math.abs(pts[0].x - pts[1].x) > 0.5) pts = zRoute(p0, p1);
+  return { pts };
+}
+
+// Mark (sign=+1) or unmark (sign=-1) the cells a polyline occupies, remembering whether the run was horizontal or vertical.
+function markPolyline(grid, pts, sign) {
+  const bump = (arr, c) => { arr[c] = clamp(arr[c] + sign, 0, 255); };
+  for (let i = 1; i < pts.length; i++) {
+    const a = grid.toCell(pts[i - 1].x, pts[i - 1].y), b = grid.toCell(pts[i].x, pts[i].y);
+    const horiz = a[1] === b[1];
+    const sx = Math.sign(b[0] - a[0]), sy = Math.sign(b[1] - a[1]);
+    let x = a[0], y = a[1], guard = 0;
+    for (;;) {
+      const c = y * grid.cols + x;
+      bump(horiz ? grid.usedH : grid.usedV, c);
+      if (x > 0) bump(grid.adj, c - 1); if (x < grid.cols - 1) bump(grid.adj, c + 1);
+      if (y > 0) bump(grid.adj, c - grid.cols); if (y < grid.rows - 1) bump(grid.adj, c + grid.cols);
+      if ((x === b[0] && y === b[1]) || ++guard > 100000) break;
+      x += sx; y += sy;
+    }
+  }
+}
+// Does any run of this polyline pass through an icon (other than the ones it belongs to)?
+function pathHitsNode(pts, ownIds, pad) {
+  pad = pad == null ? 4 : pad;
+  for (const n of state.nodes) {
+    if (ownIds.has(n.id)) continue;
+    const x0 = n.x - pad, x1 = n.x + n.w + pad, y0 = n.y - pad, y1 = n.y + n.h + pad;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      if (Math.max(a.x, b.x) > x0 && Math.min(a.x, b.x) < x1 && Math.max(a.y, b.y) > y0 && Math.min(a.y, b.y) < y1) return n;
+    }
+  }
+  return null;
+}
+function edgeNodeIds(e) { return new Set(e.a.concat(e.b).map(p => { const P = isPending(p) ? null : findPort(p); return P ? P.node.id : null; }).filter(Boolean)); }
+// Keep a hand-adjusted trunk attached when its end points move: slide the first/last bend so the runs stay orthogonal.
+function adaptManual(M, p0, p1) {
+  M = M.map(p => ({ x: p.x, y: p.y }));
+  if (M.length < 3) return null;
+  const h0 = Math.abs(M[0].y - M[1].y) < 0.5;
+  if (h0) M[1].y = p0.y; else M[1].x = p0.x;
+  M[0] = { x: p0.x, y: p0.y };
+  const n = M.length - 1, h1 = Math.abs(M[n].y - M[n - 1].y) < 0.5;
+  if (h1) M[n - 1].y = p1.y; else M[n - 1].x = p1.x;
+  M[n] = { x: p1.x, y: p1.y };
+  for (let i = 1; i < M.length; i++) if (Math.abs(M[i].x - M[i - 1].x) > 0.5 && Math.abs(M[i].y - M[i - 1].y) > 0.5) return null; // no longer orthogonal: fall back to auto
+  return M;
+}
+function computeRoutes() {
+  routes = new Map();
+  const grid = buildGrid();
+  const geoms = new Map();
+  for (const e of state.edges) { const A = endGeom(e, 'a'), B = endGeom(e, 'b'); if (A && B) geoms.set(e.id, { A, B }); }
+  const order = state.edges.filter(e => geoms.has(e.id)).sort((a, b) => {
+    if (!!a.route !== !!b.route) return a.route ? -1 : 1;
+    const ga = geoms.get(a.id), gb = geoms.get(b.id);
+    return (Math.abs(ga.A.tip.x - ga.B.tip.x) + Math.abs(ga.A.tip.y - ga.B.tip.y)) - (Math.abs(gb.A.tip.x - gb.B.tip.x) + Math.abs(gb.A.tip.y - gb.B.tip.y));
+  });
+  // fixed geometry (fan-out branches and collectors) is marked first so trunks route around it
+  const fixed = new Map();
+  for (const e of order) {
+    const { A, B } = geoms.get(e.id);
+    const branches = [];
+    for (const side of [A, B]) {
+      if (side.single) continue;
+      for (const p of side.ports) branches.push([{ x: p.x, y: p.y }, { x: side.collector.x, y: p.y }]);
+      branches.push([{ x: side.collector.x, y: side.collector.y0 }, { x: side.collector.x, y: side.collector.y1 }]);
+    }
+    fixed.set(e.id, branches);
+    if (grid) for (const br of branches) markPolyline(grid, br, 1);
+  }
+  const trunks = new Map();
+  const routeOne = e => {
+    const { A, B } = geoms.get(e.id);
+    let pts;
+    if (e.route) {
+      const M = adaptManual(e.route, A.tip, B.tip);
+      // the trunk runs tip to tip, so it may not pass under any icon — including its own end icons
+      if (M && !pathHitsNode(M, new Set(), 4)) { e.route = M; pts = simplify(M); } else delete e.route; // an icon moved onto the path: back to auto
+    }
+    if (!pts) pts = trunkRoute(grid, A, B).pts;
+    return pts;
+  };
+  for (const e of order) { const pts = routeOne(e); trunks.set(e.id, pts); if (grid) markPolyline(grid, pts, 1); }
+  // a second look at every automatic path with all the others in place lets early paths dodge later ones
+  if (grid && order.length <= 80) for (let pass = 0; pass < 2; pass++) {
+    for (const e of order) {
+      if (e.route) continue;
+      markPolyline(grid, trunks.get(e.id), -1);
+      const pts = routeOne(e); trunks.set(e.id, pts); markPolyline(grid, pts, 1);
+    }
+  }
+  for (const e of order) {
+    const { A, B } = geoms.get(e.id);
+    const pts = trunks.get(e.id);
+    const branches = fixed.get(e.id).filter(br => Math.abs(br[0].y - br[1].y) < 0.5); // collectors are drawn separately
+    let full = pts.slice();
+    if (A.single) full.unshift({ x: A.ports[0].x, y: A.ports[0].y });
+    if (B.single) full.push({ x: B.ports[0].x, y: B.ports[0].y });
+    full = simplify(full);
+    routes.set(e.id, { trunk: full, mid: pts, branches, A, B });
+  }
+}
+
+function polyLength(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += Math.abs(pts[i].x - pts[i - 1].x) + Math.abs(pts[i].y - pts[i - 1].y); return L; }
+function polyMid(pts) {
+  const half = polyLength(pts) / 2; let acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i]; const seg = Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+    if (acc + seg >= half) { const t = seg ? (half - acc) / seg : 0; return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, horiz: Math.abs(b.y - a.y) < 0.5 }; }
+    acc += seg;
+  }
+  const p = pts[pts.length - 1]; return { x: p.x, y: p.y, horiz: true };
+}
+function pathD(pts) { return pts.map((p, i) => (i ? 'L' : 'M') + p.x + ' ' + p.y).join(''); }
+// ---------- rendering (shared by the live canvas and export) ----------
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function text(parent, x, y, str, attrs) {
+  const t = el('text', Object.assign({ x, y, 'font-family': FONT, 'font-size': 11 }, attrs), parent);
+  t.textContent = str;
+  return t;
+}
+
+function renderGrid(layer, th, size, on) {
+  layer.innerHTML = '';
+  if (!on) return;
+  const defs = el('defs', {}, layer);
+  const pat = el('pattern', { id: 'gridPat', width: size, height: size, patternUnits: 'userSpaceOnUse' }, defs);
+  el('path', { d: 'M ' + size + ' 0 V ' + size + ' M 0 ' + size + ' H ' + size, fill: 'none', stroke: th.grid, 'stroke-width': 1 }, pat);
+  el('rect', { x: -40000, y: -40000, width: 80000, height: 80000, fill: 'url(#gridPat)', 'pointer-events': 'none' }, layer);
+}
+
+function renderShapes(layer, th, live) {
+  layer.innerHTML = '';
+  for (const s of state.shapes) {
+    const g = el('g', { 'data-shape': s.id }, layer);
+    const stroke = colorOf(s.stroke, th), w = s.width || 1.5, da = dashArray(s.dash, w);
+    const fill = (!s.fill || s.fill === 'none') ? 'none' : (s.fill === 'auto' ? th.panel : s.fill);
+    if (s.kind === 'rect') el('rect', { x: s.x, y: s.y, width: s.w, height: s.h, rx: 3, fill, stroke, 'stroke-width': w, 'stroke-dasharray': da }, g);
+    else if (s.kind === 'ellipse') el('ellipse', { cx: s.x + s.w / 2, cy: s.y + s.h / 2, rx: s.w / 2, ry: s.h / 2, fill, stroke, 'stroke-width': w, 'stroke-dasharray': da }, g);
+    else if (s.kind === 'line') {
+      el('path', { d: 'M' + s.x + ' ' + s.y + 'L' + s.x2 + ' ' + s.y2, fill: 'none', stroke, 'stroke-width': w, 'stroke-dasharray': da, 'stroke-linecap': 'round' }, g);
+      if (s.arrow) arrowHead(g, { x: s.x, y: s.y }, { x: s.x2, y: s.y2 }, stroke, w);
+      if (live) el('path', { d: 'M' + s.x + ' ' + s.y + 'L' + s.x2 + ' ' + s.y2, fill: 'none', stroke: 'transparent', 'stroke-width': Math.max(12, w + 8) }, g);
+    } else if (s.kind === 'text') {
+      const fs = s.fontSize || 13;
+      if (fill !== 'none') el('rect', { x: s.x, y: s.y, width: s.w, height: s.h, fill, stroke: 'none' }, g);
+      const lines = String(s.text || '').split('\n');
+      const anchor = s.align === 'center' ? 'middle' : (s.align === 'right' ? 'end' : 'start');
+      const tx = s.align === 'center' ? s.x + s.w / 2 : (s.align === 'right' ? s.x + s.w - 5 : s.x + 5);
+      const t = el('text', { x: tx, y: s.y + 4 + fs, 'font-family': FONT, 'font-size': fs, fill: stroke, 'text-anchor': anchor, 'font-weight': s.bold ? 600 : 400 }, g);
+      lines.forEach((ln, i) => { const ts = el('tspan', { x: tx, dy: i ? fs * 1.3 : 0 }, t); ts.textContent = ln || ' '; });
+      if (live) el('rect', { x: s.x, y: s.y, width: s.w, height: s.h, fill: 'transparent', stroke: 'none' }, g);
+    }
+  }
+}
+
+function arrowHead(parent, from, to, color, w) {
+  const L = 5 + w * 1.6, W = 3 + w;
+  const dx = to.x - from.x, dy = to.y - from.y, len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;
+  const bx = to.x - ux * L, by = to.y - uy * L;
+  const p = [[to.x, to.y], [bx + uy * W, by - ux * W], [bx - uy * W, by + ux * W]].map(q => q.join(',')).join(' ');
+  el('polygon', { points: p, fill: color, stroke: 'none' }, parent);
+}
+
+function renderEdges(layer, th, live) {
+  layer.innerHTML = '';
+  for (const e of state.edges) {
+    const r = routes.get(e.id);
+    if (!r) continue;
+    const g = el('g', { 'data-edge': e.id }, layer);
+    const color = colorOf(e.stroke, th), w = e.width || 2, da = dashArray(e.dash, w);
+    const common = { fill: 'none', stroke: color, 'stroke-width': w, 'stroke-dasharray': da, 'stroke-linejoin': 'round', 'stroke-linecap': 'butt' };
+    for (const side of [r.A, r.B]) if (!side.single) el('path', { d: 'M' + side.collector.x + ' ' + side.collector.y0 + 'V' + side.collector.y1, ...common }, g);
+    for (const br of r.branches) el('path', { d: pathD(br), ...common }, g);
+    el('path', { d: pathD(r.trunk), ...common }, g);
+    // arrowheads at destination ports
+    if (r.B.single) { const n = r.trunk.length; arrowHead(g, r.trunk[n - 2], r.trunk[n - 1], color, w); }
+    else for (const p of r.B.ports) arrowHead(g, { x: p.x + r.B.inward.x * -10, y: p.y + r.B.inward.y * -10 }, p, color, w);
+    // unassigned fan-out slots: the far end of a bundle that still needs a home
+    for (const [key, side] of [['a', r.A], ['b', r.B]]) {
+      if (!side.stubs || !side.stubs.length) continue;
+      const hi = live ? th.warn : color;
+      const yFrom = side.stubs[0].y - PITCH, yTo = side.stubs[side.stubs.length - 1].y;
+      el('path', { d: 'M' + side.collector.x + ' ' + yFrom + 'V' + yTo, fill: 'none', stroke: hi, 'stroke-width': w + (live ? 1 : 0), 'stroke-dasharray': '3 3' }, g);
+      for (const st of side.stubs) {
+        if (live) {
+          const ring = el('circle', { cx: st.x, cy: st.y, r: 9, fill: 'none', stroke: th.warn, 'stroke-width': 2, 'pointer-events': 'none' }, g);
+          if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            el('animate', { attributeName: 'r', values: '6;14;6', dur: '1.2s', repeatCount: 'indefinite' }, ring);
+            el('animate', { attributeName: 'opacity', values: '1;0.1;1', dur: '1.2s', repeatCount: 'indefinite' }, ring);
+          }
+        }
+        el('circle', { cx: st.x, cy: st.y, r: live ? 5.5 : 3.5, fill: live ? th.warn : 'none', stroke: hi, 'stroke-width': 1.5, 'data-pend': e.id + '|' + key + '|' + st.ref, style: live ? 'cursor:crosshair' : null }, g);
+      }
+    }
+    // multi-signal slash
+    const m = polyMid(r.trunk);
+    if (e.count > 1) {
+      const s = 6;
+      el('path', { d: m.horiz ? 'M' + (m.x - s * .7) + ' ' + (m.y + s) + 'L' + (m.x + s * .7) + ' ' + (m.y - s)
+                               : 'M' + (m.x - s) + ' ' + (m.y + s * .7) + 'L' + (m.x + s) + ' ' + (m.y - s * .7),
+        stroke: color, 'stroke-width': Math.max(1.5, w), fill: 'none' }, g);
+      text(g, m.horiz ? m.x + 8 : m.x + 9, m.horiz ? m.y - 6 : m.y + 4, String(e.count), { fill: th.text, 'font-size': 10, 'font-weight': 600 });
+    }
+    if (e.label) text(g, m.horiz ? m.x : m.x + 9, m.horiz ? m.y - (e.count > 1 ? 16 : 6) : m.y - 8, e.label, { fill: th.dim, 'font-size': 10.5, 'text-anchor': m.horiz ? 'middle' : 'start' });
+    if (live) {
+      const hit = { fill: 'none', stroke: 'transparent', 'stroke-width': Math.max(12, w + 8) };
+      // one hit path per trunk segment so bends can be dragged
+      for (let i = 1; i < r.trunk.length; i++) {
+        const a = r.trunk[i - 1], b = r.trunk[i], horiz = Math.abs(a.y - b.y) < 0.5;
+        el('path', { d: 'M' + a.x + ' ' + a.y + 'L' + b.x + ' ' + b.y, ...hit, 'data-seg': i - 1, style: 'cursor:' + (horiz ? 'ns-resize' : 'ew-resize') }, g);
+      }
+      for (const br of r.branches) el('path', { d: pathD(br), ...hit }, g);
+    }
+  }
+}
+
+function renderNodes(layer, th, live) {
+  layer.innerHTML = '';
+  for (const n of state.nodes) {
+    const L = nodeLayout(n);
+    const g = el('g', { 'data-node': n.id }, layer);
+    el('rect', { x: n.x, y: n.y, width: n.w, height: n.h, rx: 6, fill: th.panel, stroke: th.line2, 'stroke-width': 1 }, g);
+    el('path', { d: 'M' + (n.x + 1) + ' ' + (n.y + HEAD) + 'H' + (n.x + n.w - 1), stroke: th.line, 'stroke-width': 1 }, g);
+    text(g, n.x + n.w / 2, n.y + 17, n.name, { fill: th.text, 'font-size': 12, 'font-weight': 600, 'text-anchor': 'middle' });
+    const iconTop = n.y + HEAD + (L.top ? TB : 0), iconBottom = n.y + n.h - (L.bottom ? TB : 0);
+    const ig = el('g', { transform: 'translate(' + (n.x + n.w / 2 - 20) + ' ' + (iconTop + (iconBottom - iconTop - 40) / 2) + ')',
+      fill: 'none', stroke: th.dim, 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    ig.innerHTML = ICONS[TYPES[n.type].icon];
+    ['in', 'out'].forEach(io => {
+      const list = io === 'in' ? n.inputs : n.outputs;
+      list.forEach((p, i) => {
+        const pos = portPos(n, io, i), side = pos.side;
+        const hot = live && ui.hoverPort === p.id;
+        el('circle', { cx: pos.x, cy: pos.y, r: hot ? 6 : 4, fill: hot ? th.accent : th.panel2, stroke: hot ? th.accent : th.dim, 'stroke-width': 1.2, 'data-port': p.id, 'data-side': io }, g);
+        // connector label, inside the icon
+        if (side === 'left') text(g, pos.x + 10, pos.y + 3.5, p.label, { fill: th.text, 'font-size': 10, 'text-anchor': 'start' });
+        else if (side === 'right') text(g, pos.x - 10, pos.y + 3.5, p.label, { fill: th.text, 'font-size': 10, 'text-anchor': 'end' });
+        else if (side === 'top') text(g, pos.x, pos.y + HEAD + 12, p.label, { fill: th.text, 'font-size': 10, 'text-anchor': 'middle' });
+        else text(g, pos.x, pos.y - 7, p.label, { fill: th.text, 'font-size': 10, 'text-anchor': 'middle' });
+        // signal label, outside the icon
+        if (p.sig) {
+          let lx, ly, anchor;
+          if (side === 'left') { lx = pos.x - 7; ly = pos.y - 5; anchor = 'end'; }
+          else if (side === 'right') { lx = pos.x + 7; ly = pos.y - 5; anchor = 'start'; }
+          else if (side === 'top') { lx = pos.x + 7; ly = pos.y - 8; anchor = 'start'; }
+          else { lx = pos.x + 7; ly = pos.y + 15; anchor = 'start'; }
+          text(g, lx, ly, p.sig, { fill: th.dim, 'font-size': 10, 'text-anchor': anchor, 'data-siglabel': p.id });
+        }
+        if (live) el('circle', { cx: pos.x, cy: pos.y, r: 9, fill: 'transparent', 'data-port': p.id, 'data-side': io }, g);
+      });
+    });
+  }
+}
+
+function renderOverlay(layer, th) {
+  layer.innerHTML = '';
+  for (const id of ui.sel) {
+    const n = nodeById(id);
+    if (n) { el('rect', { x: n.x - 3, y: n.y - 3, width: n.w + 6, height: n.h + 6, rx: 8, fill: 'none', stroke: th.accent, 'stroke-width': 1.5, 'stroke-dasharray': '4 3', 'pointer-events': 'none' }, layer); continue; }
+    const e = edgeById(id);
+    if (e) {
+      const r = routes.get(e.id); if (!r) continue;
+      el('path', { d: pathD(r.trunk), fill: 'none', stroke: th.accent, 'stroke-width': (e.width || 2) + 5, opacity: .35, 'pointer-events': 'none', 'stroke-linejoin': 'round' }, layer);
+      for (const br of r.branches) el('path', { d: pathD(br), fill: 'none', stroke: th.accent, 'stroke-width': (e.width || 2) + 5, opacity: .35, 'pointer-events': 'none' }, layer);
+      continue;
+    }
+    const s = shapeById(id);
+    if (s) {
+      const H = 7 / ui.view.z;
+      const handle = (x, y, name) => el('rect', { x: x - H / 2, y: y - H / 2, width: H, height: H, fill: th.panel2, stroke: th.accent, 'stroke-width': 1.2 / ui.view.z, 'data-handle': name, 'data-shape': s.id, style: 'cursor:pointer' }, layer);
+      if (s.kind === 'line') { handle(s.x, s.y, 'p1'); handle(s.x2, s.y2, 'p2'); }
+      else {
+        el('rect', { x: s.x - 2, y: s.y - 2, width: s.w + 4, height: s.h + 4, fill: 'none', stroke: th.accent, 'stroke-width': 1, 'stroke-dasharray': '4 3', 'pointer-events': 'none' }, layer);
+        handle(s.x, s.y, 'nw'); handle(s.x + s.w, s.y, 'ne'); handle(s.x, s.y + s.h, 'sw'); handle(s.x + s.w, s.y + s.h, 'se');
+      }
+    }
+  }
+}
+
+function renderAll(container, th, live, showGrid) {
+  renderGrid(container.querySelector('.lGrid'), th, state.grid, showGrid);
+  renderShapes(container.querySelector('.lShapes'), th, live);
+  renderEdges(container.querySelector('.lEdges'), th, live);
+  renderNodes(container.querySelector('.lNodes'), th, live);
+}
+
+function contentBounds() {
+  let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+  const add = (x, y, w, h) => { minx = Math.min(minx, x); miny = Math.min(miny, y); maxx = Math.max(maxx, x + w); maxy = Math.max(maxy, y + h); };
+  for (const n of state.nodes) {
+    const ext = io => Math.max(0, ...(io === 'in' ? n.inputs : n.outputs).map(p => labelExt(p, portSide(n, io))));
+    const L = nodeLayout(n);
+    const left = 12 + (L.inS === 'left' ? ext('in') : 0) + (L.outS === 'left' ? ext('out') : 0), right = 12 + (L.inS === 'right' ? ext('in') : 0) + (L.outS === 'right' ? ext('out') : 0);
+    add(n.x - left, n.y - (L.top ? 24 : 6), n.w + left + right, n.h + (L.top ? 24 : 6) + (L.bottom ? 24 : 6));
+  }
+  for (const s of state.shapes) { const b = shapeBox(s); add(b.x, b.y, b.w, b.h); }
+  for (const r of routes.values()) { for (const p of r.trunk) add(p.x, p.y - 14, 0, 14); for (const side of [r.A, r.B]) if (side.stubs) for (const st of side.stubs) add(st.x - 40, st.y - 4, 80, 24); }
+  if (minx === Infinity) return { x: 0, y: 0, w: 400, h: 300 };
+  return { x: minx, y: miny, w: maxx - minx, h: maxy - miny };
+}
+// ---------- app wiring ----------
+const svg = $('#svg'), world = $('#world'), overlay = world.querySelector('.lOverlay');
+const propsEl = $('#props'), statusEl = $('#status'), ghost = $('#ghost');
+let drag = null, rafPending = false, propsKey = '';
+
+function theme() { return THEMES[ui.theme]; }
+function applyTheme() {
+  const th = theme(); const root = document.documentElement;
+  for (const k in CSS_MAP) root.style.setProperty(CSS_MAP[k], th[k]);
+  root.dataset.theme = ui.theme;
+  $('#btnTheme').textContent = ui.theme === 'dark' ? 'Light mode' : 'Dark mode';
+}
+function setView() {
+  world.setAttribute('transform', 'translate(' + ui.view.x + ' ' + ui.view.y + ') scale(' + ui.view.z + ')');
+  $('#zoomLbl').textContent = Math.round(ui.view.z * 100) + '%';
+}
+function toWorld(ev) {
+  const r = svg.getBoundingClientRect();
+  return { x: (ev.clientX - r.left - ui.view.x) / ui.view.z, y: (ev.clientY - r.top - ui.view.y) / ui.view.z };
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 1800); }
+function setStatus(s) { statusEl.textContent = s; }
+
+function refresh(props) {
+  computeRoutes();
+  renderAll(world, theme(), true, state.showGrid);
+  renderOverlay(overlay, theme());
+  $('#btnGrid').classList.toggle('on', state.showGrid);
+  $('#btnSnap').classList.toggle('on', state.snap);
+  if (props) renderProps(); else syncPropsHeader();
+  scheduleSave();
+}
+function quickRender() { // during drags: reroute + redraw without touching the props panel
+  if (rafPending) return; rafPending = true;
+  requestAnimationFrame(() => { rafPending = false; computeRoutes(); renderAll(world, theme(), true, state.showGrid); renderOverlay(overlay, theme()); });
+}
+let saveTimer = null;
+function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem('videodraw.doc', JSON.stringify(state)); } catch (e) {} }, 400); }
+
+// ---------- selection helpers ----------
+function select(ids, add) { if (!add) ui.sel.clear(); for (const id of ids) ui.sel.add(id); renderOverlay(overlay, theme()); renderProps(); }
+function selectedEdges() { return Array.from(ui.sel).map(edgeById).filter(Boolean); }
+function deleteSelection() {
+  if (!ui.sel.size) return;
+  pushUndo();
+  const ids = ui.sel;
+  const gonePorts = new Set();
+  for (const n of state.nodes) if (ids.has(n.id)) { n.inputs.forEach(p => gonePorts.add(p.id)); n.outputs.forEach(p => gonePorts.add(p.id)); }
+  state.nodes = state.nodes.filter(n => !ids.has(n.id));
+  state.shapes = state.shapes.filter(s => !ids.has(s.id));
+  state.edges = state.edges.filter(e => !ids.has(e.id));
+  for (const e of state.edges) { e.a = e.a.filter(p => !gonePorts.has(p)); e.b = e.b.filter(p => !gonePorts.has(p)); }
+  state.edges = state.edges.filter(e => hasReal(e.a) && hasReal(e.b));
+  ui.sel.clear();
+  refresh(true);
+}
+function duplicateSelection() {
+  const nodes = state.nodes.filter(n => ui.sel.has(n.id)), shapes = state.shapes.filter(s => ui.sel.has(s.id));
+  if (!nodes.length && !shapes.length) return;
+  pushUndo();
+  const map = new Map(); const newIds = [];
+  for (const n of nodes) {
+    const c = JSON.parse(JSON.stringify(n)); c.id = nid(); c.x += 40; c.y += 40;
+    for (const p of c.inputs.concat(c.outputs)) { const old = p.id; p.id = nid(); map.set(old, p.id); }
+    state.nodes.push(c); newIds.push(c.id);
+  }
+  for (const e of state.edges) {
+    const ok = p => map.has(p) || isPending(p), mp = p => isPending(p) ? 'pending:' + nid() : map.get(p);
+    if (e.a.every(ok) && e.b.every(ok) && hasReal(e.a) && hasReal(e.b)) {
+      const c = JSON.parse(JSON.stringify(e)); c.id = nid(); c.a = e.a.map(mp); c.b = e.b.map(mp); state.edges.push(c);
+    }
+  }
+  for (const s of shapes) { const c = JSON.parse(JSON.stringify(s)); c.id = nid(); c.x += 40; c.y += 40; if (c.kind === 'line') { c.x2 += 40; c.y2 += 40; } state.shapes.push(c); newIds.push(c.id); }
+  ui.sel = new Set(newIds);
+  refresh(true);
+}
+
+// ---------- edges ----------
+function connectPorts(pidA, pidB) {
+  const A = findPort(pidA), B = findPort(pidB);
+  if (!A || !B) return false;
+  if (A.side === B.side) { toast('Connect an output to an input'); return false; }
+  const src = A.side === 'out' ? pidA : pidB, dst = A.side === 'out' ? pidB : pidA;
+  if (state.edges.some(e => e.a.length === 1 && e.b.length === 1 && e.a[0] === src && e.b[0] === dst)) return false;
+  pushUndo();
+  state.edges.push({ id: nid(), a: [src], b: [dst], stroke: state.defaults.stroke, width: state.defaults.width, dash: state.defaults.dash, count: 1, label: '' });
+  return true;
+}
+function addPortToEdge(edge, pid) {
+  const P = findPort(pid); if (!P) return false;
+  const key = P.side === 'out' ? 'a' : 'b', other = key === 'a' ? 'b' : 'a';
+  if (edge[key].includes(pid)) return false;
+  pushUndo();
+  // fill an unassigned slot on this side first, otherwise grow both sides so the fan-out stays matched
+  const slot = edge[key].findIndex(isPending);
+  if (slot >= 0) edge[key][slot] = pid;
+  else { edge[key].push(pid); edge[other].push('pending:' + nid()); }
+  edge.count = Math.max(edge.count || 1, edge.a.length, edge.b.length);
+  if (edge[other].some(isPending)) toast('The other end of the bundle now has an open stub — drag it to a port');
+  return true;
+}
+function resolvePending(edge, key, ref, pid) {
+  const P = findPort(pid); if (!P) return false;
+  if ((key === 'a') !== (P.side === 'out')) { toast(key === 'a' ? 'This stub needs an output port' : 'This stub needs an input port'); return false; }
+  if (edge[key].includes(pid)) { toast('That port is already on this path'); return false; }
+  const i = edge[key].indexOf(ref); if (i < 0) return false;
+  pushUndo(); edge[key][i] = pid; return true;
+}
+function hoverTargets(ev) {
+  const hover = document.elementFromPoint(ev.clientX, ev.clientY);
+  const c = sel => (hover && hover.closest) ? hover.closest(sel) : null;
+  return { port: c('[data-port]'), edge: c('[data-edge]'), pend: c('[data-pend]'), node: c('[data-node]') };
+}
+
+// ---------- tools ----------
+function setTool(t) {
+  ui.tool = t;
+  $$('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+  svg.classList.toggle('tool-pan', t === 'pan');
+  svg.classList.toggle('tool-draw', ['rect', 'ellipse', 'line', 'text'].includes(t));
+  const hints = { select: 'Drag from a port to connect. Drop a connection onto an existing line to bundle it.', pan: 'Drag to pan. Scroll to move, Ctrl+scroll to zoom.',
+    rect: 'Drag to draw a rectangle.', ellipse: 'Drag to draw an ellipse.', line: 'Drag to draw a line.', text: 'Click or drag to place a text box.' };
+  $('#hint').textContent = hints[t] || '';
+}
+
+// ---------- pointer handling on the canvas ----------
+svg.addEventListener('pointerdown', ev => {
+  if (ev.button !== 0 && ev.button !== 1) return;
+  const t = ev.target;
+  const wp = toWorld(ev);
+  svg.setPointerCapture(ev.pointerId);
+  if (ev.button === 1 || ui.tool === 'pan' || ui.space) { drag = { kind: 'pan', sx: ev.clientX, sy: ev.clientY, ox: ui.view.x, oy: ui.view.y }; svg.classList.add('dragging'); ev.preventDefault(); return; }
+  if (['rect', 'ellipse', 'line', 'text'].includes(ui.tool)) {
+    drag = { kind: 'draw', start: { x: snap(wp.x), y: snap(wp.y) }, shape: null }; return;
+  }
+  const handle = t.closest('[data-handle]');
+  if (handle) {
+    const s = shapeById(handle.dataset.shape);
+    drag = { kind: 'resize', shape: s, handle: handle.dataset.handle, orig: JSON.parse(JSON.stringify(s)), start: wp };
+    pushUndo(); return;
+  }
+  const pend = t.closest('[data-pend]');
+  if (pend) { const [eid, key, ref] = pend.dataset.pend.split('|'); drag = { kind: 'connect', pend: { edge: edgeById(eid), key, ref }, at: wp, cur: wp }; return; }
+  const port = t.closest('[data-port]');
+  if (port) {
+    drag = { kind: 'connect', from: port.dataset.port, cur: wp };
+    return;
+  }
+  const nodeEl = t.closest('[data-node]'), edgeEl = t.closest('[data-edge]'), shapeEl = t.closest('[data-shape]');
+  const hitId = nodeEl ? nodeEl.dataset.node : (shapeEl ? shapeEl.dataset.shape : (edgeEl ? edgeEl.dataset.edge : null));
+  if (hitId) {
+    const multi = ev.shiftKey || ev.ctrlKey || ev.metaKey;
+    if (multi) { if (ui.sel.has(hitId)) ui.sel.delete(hitId); else ui.sel.add(hitId); renderOverlay(overlay, theme()); renderProps(); }
+    else if (!ui.sel.has(hitId)) select([hitId]);
+    if (edgeEl && !nodeEl && !shapeEl) {
+      const seg = t.closest('[data-seg]');
+      if (seg && !multi) drag = { kind: 'bend', edge: edgeById(hitId), seg: +seg.dataset.seg, start: wp, moved: false };
+      return;
+    }
+    const items = [];
+    for (const id of ui.sel) { const n = nodeById(id); if (n) items.push({ n, x: n.x, y: n.y }); const s = shapeById(id); if (s) items.push({ s, x: s.x, y: s.y, x2: s.x2, y2: s.y2 }); }
+    drag = { kind: 'move', items, start: wp, moved: false };
+    return;
+  }
+  // empty canvas: marquee
+  const addSel = ev.shiftKey || ev.ctrlKey || ev.metaKey;
+  drag = { kind: 'marquee', start: wp, add: addSel };
+  if (!addSel && ui.sel.size) select([]);
+});
+
+svg.addEventListener('pointermove', ev => {
+  const wp = toWorld(ev);
+  if (!drag) {
+    const p = ev.target.closest && ev.target.closest('[data-port]');
+    const pid = p ? p.dataset.port : null;
+    if (pid !== ui.hoverPort) { ui.hoverPort = pid; renderNodes(world.querySelector('.lNodes'), theme(), true); }
+    return;
+  }
+  if (drag.kind === 'pan') { ui.view.x = drag.ox + ev.clientX - drag.sx; ui.view.y = drag.oy + ev.clientY - drag.sy; setView(); return; }
+  if (drag.kind === 'move') {
+    const dx = wp.x - drag.start.x, dy = wp.y - drag.start.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 3) return;
+    if (!drag.moved) { drag.moved = true; pushUndo(); }
+    for (const it of drag.items) {
+      if (it.n) { it.n.x = snap(it.x + dx); it.n.y = snap(it.y + dy); }
+      else { const nx = snap(it.x + dx), ny = snap(it.y + dy); const ddx = nx - it.s.x, ddy = ny - it.s.y; it.s.x = nx; it.s.y = ny; if (it.s.kind === 'line') { it.s.x2 += ddx; it.s.y2 += ddy; } }
+    }
+    quickRender(); return;
+  }
+  if (drag.kind === 'bend') {
+    if (!drag.moved && Math.hypot(wp.x - drag.start.x, wp.y - drag.start.y) < 3) return;
+    if (!drag.moved) { drag.moved = true; pushUndo(); beginBend(drag); }
+    moveBend(drag, wp);
+    quickRender(); return;
+  }
+  if (drag.kind === 'connect') {
+    drag.cur = wp;
+    const H = hoverTargets(ev);
+    snapSideForHover(drag, H, wp);
+    const pid = H.port ? H.port.dataset.port : drag.snapPid;
+    if (pid !== ui.hoverPort) { ui.hoverPort = pid; renderNodes(world.querySelector('.lNodes'), theme(), true); }
+    renderOverlay(overlay, theme());
+    const end = H.port ? (() => { const B = findPort(pid); return portPos(B.node, B.side, B.index); })() : wp;
+    let start;
+    if (drag.pend) start = drag.at;
+    else {
+      const A = findPort(drag.from); if (!A) return;
+      const a = portPos(A.node, A.side, A.index), o = SIDE_DIR[a.side];
+      start = { x: a.x + DX[o] * STUB, y: a.y + DY[o] * STUB };
+      el('path', { d: 'M' + a.x + ' ' + a.y + 'L' + start.x + ' ' + start.y, stroke: theme().accent, 'stroke-width': 2, 'pointer-events': 'none' }, overlay);
+    }
+    el('path', { d: pathD(zRoute(start, end)), fill: 'none', stroke: theme().accent, 'stroke-width': 2, 'stroke-dasharray': '5 4', 'pointer-events': 'none' }, overlay);
+    if (H.edge && !drag.pend) { const r = routes.get(H.edge.dataset.edge); if (r) el('path', { d: pathD(r.trunk), fill: 'none', stroke: theme().live, 'stroke-width': 8, opacity: .5, 'pointer-events': 'none' }, overlay); }
+    setStatus(H.pend && !drag.pend ? 'Release to fill this open stub' : (H.edge && !drag.pend) ? 'Release to add this port to the bundle' : (H.port ? 'Release to connect' : 'Drag to a port'));
+    return;
+  }
+  if (drag.kind === 'marquee') {
+    renderOverlay(overlay, theme());
+    const x = Math.min(drag.start.x, wp.x), y = Math.min(drag.start.y, wp.y), w = Math.abs(wp.x - drag.start.x), h = Math.abs(wp.y - drag.start.y);
+    drag.box = { x, y, w, h };
+    el('rect', { x, y, width: w, height: h, fill: theme().soft, stroke: theme().accent, 'stroke-width': 1 / ui.view.z, 'pointer-events': 'none' }, overlay);
+    return;
+  }
+  if (drag.kind === 'draw') {
+    const sx = snap(wp.x), sy = snap(wp.y);
+    if (!drag.shape) {
+      if (Math.hypot(sx - drag.start.x, sy - drag.start.y) < 1) return;
+      pushUndo();
+      drag.shape = newShape(ui.tool, drag.start.x, drag.start.y);
+      state.shapes.push(drag.shape);
+    }
+    const s = drag.shape;
+    if (s.kind === 'line') { s.x2 = sx; s.y2 = sy; }
+    else { s.x = Math.min(drag.start.x, sx); s.y = Math.min(drag.start.y, sy); s.w = Math.max(state.grid, Math.abs(sx - drag.start.x)); s.h = Math.max(state.grid, Math.abs(sy - drag.start.y)); }
+    quickRender(); return;
+  }
+  if (drag.kind === 'resize') {
+    const s = drag.shape, o = drag.orig, sx = snap(wp.x), sy = snap(wp.y);
+    if (s.kind === 'line') { if (drag.handle === 'p1') { s.x = sx; s.y = sy; } else { s.x2 = sx; s.y2 = sy; } }
+    else {
+      let x0 = o.x, y0 = o.y, x1 = o.x + o.w, y1 = o.y + o.h;
+      if (drag.handle.includes('w')) x0 = sx; if (drag.handle.includes('e')) x1 = sx;
+      if (drag.handle.includes('n')) y0 = sy; if (drag.handle.includes('s')) y1 = sy;
+      s.x = Math.min(x0, x1); s.y = Math.min(y0, y1); s.w = Math.max(state.grid, Math.abs(x1 - x0)); s.h = Math.max(state.grid, Math.abs(y1 - y0));
+    }
+    quickRender();
+  }
+});
+
+svg.addEventListener('pointerup', ev => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  svg.classList.remove('dragging');
+  const wp = toWorld(ev);
+  if (d.kind === 'bend') {
+    if (d.moved) { d.edge.route = simplify(d.edge.route); refresh(false); }
+    return;
+  }
+  if (d.kind === 'connect') {
+    const H = hoverTargets(ev);
+    if (!H.port && d.snapPid) H.port = { dataset: { port: d.snapPid } };
+    ui.hoverPort = null;
+    let changed = false;
+    if (d.pend) { if (H.port && d.pend.edge) changed = resolvePending(d.pend.edge, d.pend.key, d.pend.ref, H.port.dataset.port); }
+    else if (H.pend) { const [eid, key, ref] = H.pend.dataset.pend.split('|'); const e = edgeById(eid); if (e) changed = resolvePending(e, key, ref, d.from); }
+    else if (H.port && H.port.dataset.port !== d.from) { changed = connectPorts(d.from, H.port.dataset.port); if (changed) d.newEdge = state.edges[state.edges.length - 1]; }
+    else if (H.edge) { const e = edgeById(H.edge.dataset.edge); if (e) changed = addPortToEdge(e, d.from); }
+    setStatus('Ready');
+    if (!changed && d.sideOrig) { for (const [id, o] of d.sideOrig) { const n = nodeById(id); if (n) { n.sides = o; sizeNode(n); } } }
+    if (changed && d.newEdge) nudgeToAlign(d.newEdge);
+    if (changed) refresh(true); else { computeRoutes(); renderAll(world, theme(), true, state.showGrid); renderOverlay(overlay, theme()); }
+    return;
+  }
+  if (d.kind === 'move') { if (d.moved) refresh(false); return; }
+  if (d.kind === 'marquee') {
+    if (d.box && (d.box.w > 2 || d.box.h > 2)) {
+      const b = d.box; const inside = (x, y, w, h) => x < b.x + b.w && x + w > b.x && y < b.y + b.h && y + h > b.y;
+      const ids = [];
+      for (const n of state.nodes) if (inside(n.x, n.y, n.w, n.h)) ids.push(n.id);
+      for (const s of state.shapes) { const sb = shapeBox(s); if (inside(sb.x, sb.y, sb.w, sb.h)) ids.push(s.id); }
+      for (const e of state.edges) { const r = routes.get(e.id); if (r && r.trunk.every(p => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h)) ids.push(e.id); }
+      select(ids, d.add);
+    } else renderOverlay(overlay, theme());
+    return;
+  }
+  if (d.kind === 'draw') {
+    let s = d.shape;
+    if (!s) {
+      if (ui.tool !== 'text') { setTool('select'); return; }
+      pushUndo(); s = newShape('text', d.start.x, d.start.y); state.shapes.push(s);
+    }
+    setTool('select');
+    ui.sel = new Set([s.id]);
+    refresh(true);
+    if (s.kind === 'text') { const ta = propsEl.querySelector('textarea'); if (ta) { ta.focus(); ta.select(); } }
+    return;
+  }
+  if (d.kind === 'resize') { refresh(false); }
+});
+
+svg.addEventListener('dblclick', ev => {
+  const port = ev.target.closest('[data-port]');
+  if (port) {
+    const P = findPort(port.dataset.port); if (!P) return;
+    const v = prompt('Signal label for ' + P.node.name + ' · ' + P.port.label, P.port.sig || '');
+    if (v === null) return;
+    pushUndo(); P.port.sig = v.trim(); refresh(true); return;
+  }
+  const nodeEl = ev.target.closest('[data-node]');
+  if (nodeEl) { select([nodeEl.dataset.node]); const inp = propsEl.querySelector('[data-bind="name"]'); if (inp) { inp.focus(); inp.select(); } return; }
+  const shapeEl = ev.target.closest('[data-shape]');
+  if (shapeEl) { select([shapeEl.dataset.shape]); const ta = propsEl.querySelector('textarea'); if (ta) { ta.focus(); } }
+});
+
+svg.addEventListener('wheel', ev => {
+  ev.preventDefault();
+  const r = svg.getBoundingClientRect();
+  const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+  if (ev.ctrlKey || ev.metaKey) { // pinch / Ctrl+wheel zooms about the cursor
+    const f = Math.exp(-ev.deltaY * 0.0015);
+    const z = clamp(ui.view.z * f, 0.15, 4);
+    ui.view.x = mx - (mx - ui.view.x) * (z / ui.view.z); ui.view.y = my - (my - ui.view.y) * (z / ui.view.z); ui.view.z = z;
+  } else if (ev.shiftKey) { ui.view.x -= (ev.deltaY || ev.deltaX); }
+  else { ui.view.x -= ev.deltaX; ui.view.y -= ev.deltaY; }
+  setView(); renderOverlay(overlay, theme());
+}, { passive: false });
+
+function zoomBy(f) { const r = svg.getBoundingClientRect(); const mx = r.width / 2, my = r.height / 2; const z = clamp(ui.view.z * f, 0.15, 4);
+  ui.view.x = mx - (mx - ui.view.x) * (z / ui.view.z); ui.view.y = my - (my - ui.view.y) * (z / ui.view.z); ui.view.z = z; setView(); renderOverlay(overlay, theme()); }
+function fitView() {
+  const b = contentBounds(); const r = svg.getBoundingClientRect();
+  const z = clamp(Math.min((r.width - 80) / b.w, (r.height - 80) / b.h, 2), 0.15, 2);
+  ui.view.z = z; ui.view.x = (r.width - b.w * z) / 2 - b.x * z; ui.view.y = (r.height - b.h * z) / 2 - b.y * z; setView(); renderOverlay(overlay, theme());
+}
+
+// ---------- bend dragging ----------
+function beginBend(d) {
+  const r = routes.get(d.edge.id); if (!r) { d.dead = true; return; }
+  let M = r.mid.map(p => ({ x: p.x, y: p.y }));
+  // find the run of the trunk (tip to tip) that the grabbed drawn segment lies on; the drawn line also includes the
+  // port stubs and may have merged collinear points, so match by geometry rather than by index
+  const ga = r.trunk[d.seg], gb = r.trunk[d.seg + 1], gHoriz = Math.abs(ga.y - gb.y) < 0.5;
+  let j = -1;
+  for (let k = 0; k + 1 < M.length; k++) {
+    const a = M[k], b = M[k + 1], h = Math.abs(a.y - b.y) < 0.5;
+    if (h !== gHoriz) continue;
+    if (h ? Math.abs(a.y - ga.y) > 0.5 : Math.abs(a.x - ga.x) > 0.5) continue;
+    const lo = h ? Math.min(a.x, b.x) : Math.min(a.y, b.y), hi = h ? Math.max(a.x, b.x) : Math.max(a.y, b.y);
+    const glo = h ? Math.min(ga.x, gb.x) : Math.min(ga.y, gb.y), ghi = h ? Math.max(ga.x, gb.x) : Math.max(ga.y, gb.y);
+    if (hi >= glo - 0.5 && lo <= ghi + 0.5) { j = k; break; }
+  }
+  if (j < 0) j = d.seg === 0 ? 0 : M.length - 2;   // grabbed a port stub: act on the adjacent run
+  let horiz;
+  if (M.length === 2) { // straight trunk: pull the middle out into a U between the two fixed tips
+    const a = M[0], b = M[1];
+    horiz = Math.abs(a.y - b.y) < 0.5;
+    M = [a, { ...a }, { ...b }, b]; j = 1;
+  } else {
+    if (j === 0) { M.splice(1, 0, { ...M[0] }); j = 1; }                                  // first bend is a fixed tip: split off a copy
+    if (j + 1 === M.length - 1) M.splice(M.length - 1, 0, { ...M[M.length - 1] });         // same at the far tip
+    horiz = Math.abs(M[j].y - M[j + 1].y) < 0.5;
+    if (Math.abs(M[j].x - M[j + 1].x) < 0.5 && horiz) horiz = Math.abs(M[j - 1].y - M[j].y) > 0.5; // degenerate: perpendicular to the previous run
+  }
+  d.edge.route = M; d.j = j; d.horiz = horiz;
+}
+function moveBend(d, wp) {
+  if (d.dead) return;
+  const M = d.edge.route, j = d.j;
+  const before = [{ ...M[j] }, { ...M[j + 1] }];
+  if (d.horiz) { const y = snap(wp.y); M[j].y = y; M[j + 1].y = y; }
+  else { const x = snap(wp.x); M[j].x = x; M[j + 1].x = x; }
+  // a bend may not be dragged through an icon: the moved run and the two runs it stretches must stay clear
+  const affected = M.slice(Math.max(0, j - 1), Math.min(M.length, j + 3));
+  if (pathHitsNode(affected, new Set(), 4)) { M[j] = before[0]; M[j + 1] = before[1]; setStatus('That would run the path under an icon'); }
+  else setStatus('Ready');
+}
+function straightenEdge(e) {
+  const r = routes.get(e.id); if (!r || !r.A.single || !r.B.single) { toast('Straighten works on single-port paths'); return; }
+  const A = findPort(e.a[0]), B = findPort(e.b[0]); if (!A || !B || A.node === B.node) return;
+  const pa = r.A.ports[0], pb = r.B.ports[0];
+  const horizontal = (pa.side === 'left' || pa.side === 'right') && (pb.side === 'left' || pb.side === 'right');
+  const vertical = (pa.side === 'top' || pa.side === 'bottom') && (pb.side === 'top' || pb.side === 'bottom');
+  if (!horizontal && !vertical) { toast('These ports face different ways, so the line cannot be straight'); return; }
+  const linksOf = n => state.edges.filter(x => x.a.concat(x.b).some(pid => { const P = isPending(pid) ? null : findPort(pid); return P && P.node === n; })).length;
+  const mover = linksOf(B.node) <= linksOf(A.node) ? B.node : A.node, other = mover === B.node ? A.node : B.node;
+  const pm = mover === B.node ? pb : pa, po = mover === B.node ? pa : pb;
+  pushUndo();
+  if (horizontal) mover.y += po.y - pm.y; else mover.x += po.x - pm.x;
+  delete e.route;
+  refresh(false);
+}
+function nudgeToAlign(e) {
+  // a brand-new connection whose far icon has no other links: level the ports so the line runs straight
+  const A = findPort(e.a[0]), B = findPort(e.b[0]); if (!A || !B || A.node === B.node) return;
+  const pa = portPos(A.node, 'out', A.index), pb = portPos(B.node, 'in', B.index);
+  if (!((pa.side === 'left' || pa.side === 'right') && (pb.side === 'left' || pb.side === 'right'))) return;
+  const links = n => state.edges.filter(x => x !== e && x.a.concat(x.b).some(pid => { const P = isPending(pid) ? null : findPort(pid); return P && P.node === n; })).length;
+  const dy = pa.y - pb.y;
+  if (Math.abs(dy) < 0.5 || Math.abs(dy) > state.grid * 2) return;
+  if (links(B.node) === 0) B.node.y += dy; else if (links(A.node) === 0) A.node.y -= dy;
+}
+// While dragging a connection, an icon whose matching side has a single port pulls that port toward the cursor once
+// the cursor comes within three grid squares of the icon: left, right or bottom, whichever is nearest (never the top).
+function snapSideForHover(d, H, wp) {
+  d.snapPid = null;
+  const wantIn = d.pend ? d.pend.key !== 'a' : (() => { const P = findPort(d.from); return P && P.side === 'out'; })();
+  const io = wantIn ? 'in' : 'out';
+  const reach = 3 * state.grid;
+  let best = null, bestDist = Infinity;
+  for (const n of state.nodes) {
+    const list = io === 'in' ? n.inputs : n.outputs;
+    if (list.length !== 1) continue;
+    if (d.from && findPort(d.from).node === n) continue;
+    if (wp.x < n.x - reach || wp.x > n.x + n.w + reach || wp.y < n.y - reach || wp.y > n.y + n.h + reach) continue;
+    const dist = Math.hypot(wp.x - (n.x + n.w / 2), wp.y - (n.y + n.h / 2));
+    if (dist < bestDist) { best = n; bestDist = dist; }
+  }
+  if (!best) return;
+  const n = best, list = io === 'in' ? n.inputs : n.outputs;
+  const rx = (wp.x - (n.x + n.w / 2)) / (n.w / 2), ry = (wp.y - (n.y + n.h / 2)) / (n.h / 2);
+  let side;
+  if (Math.abs(rx) > Math.abs(ry) || ry < 0) side = rx > 0 ? 'right' : 'left';   // above the icon still means left or right
+  else side = 'bottom';
+  n.sides = n.sides || { in: 'left', out: 'right' };
+  if (n.sides[io] !== side) {
+    d.sideOrig = d.sideOrig || new Map();
+    if (!d.sideOrig.has(n.id)) d.sideOrig.set(n.id, { ...n.sides });
+    n.sides[io] = side; sizeNode(n);
+    computeRoutes(); renderAll(world, theme(), true, state.showGrid);
+  }
+  d.snapPid = list[0].id;
+}
+
+function zoomToSelection() {
+  if (!ui.sel.size) { toast('Select something first'); return; }
+  let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+  const add = (x, y, w, h) => { minx = Math.min(minx, x); miny = Math.min(miny, y); maxx = Math.max(maxx, x + w); maxy = Math.max(maxy, y + h); };
+  for (const id of ui.sel) {
+    const n = nodeById(id); if (n) { add(n.x - 40, n.y - 20, n.w + 80, n.h + 40); continue; }
+    const sh = shapeById(id); if (sh) { const b = shapeBox(sh); add(b.x, b.y, b.w, b.h); continue; }
+    const r = routes.get(id); if (r) for (const p of r.trunk) add(p.x, p.y, 0, 0);
+  }
+  if (minx === Infinity) return;
+  const b = { x: minx, y: miny, w: Math.max(maxx - minx, 40), h: Math.max(maxy - miny, 40) };
+  const rc = svg.getBoundingClientRect();
+  const z = clamp(Math.min((rc.width - 80) / b.w, (rc.height - 80) / b.h), 0.15, 3);
+  ui.view.z = z; ui.view.x = (rc.width - b.w * z) / 2 - b.x * z; ui.view.y = (rc.height - b.h * z) / 2 - b.y * z;
+  setView(); renderOverlay(overlay, theme());
+}
+
+function newShape(kind, x, y) {
+  const base = { id: nid(), kind, x, y, stroke: 'auto', width: 1.5, dash: 'solid', fill: 'none' };
+  if (kind === 'line') return Object.assign(base, { x2: x + state.grid, y2: y, arrow: false });
+  if (kind === 'text') return Object.assign(base, { w: 140, h: 40, text: 'Text', fontSize: 13, align: 'left', bold: false });
+  return Object.assign(base, { w: state.grid, h: state.grid });
+}
+
+// ---------- keyboard ----------
+window.addEventListener('keydown', ev => {
+  const tag = (ev.target.tagName || '').toLowerCase();
+  const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
+  if (ev.key === ' ' && !typing) { ui.space = true; svg.classList.add('tool-pan'); ev.preventDefault(); return; }
+  if (typing) { if (ev.key === 'Escape') ev.target.blur(); return; }
+  const mod = ev.ctrlKey || ev.metaKey;
+  if (mod && ev.key.toLowerCase() === 'z') { ev.preventDefault(); ev.shiftKey ? redo() : undo(); return; }
+  if (mod && ev.key.toLowerCase() === 'y') { ev.preventDefault(); redo(); return; }
+  if (mod && ev.key.toLowerCase() === 'd') { ev.preventDefault(); duplicateSelection(); return; }
+  if (mod && ev.key.toLowerCase() === 'a') { ev.preventDefault(); select(state.nodes.map(n => n.id).concat(state.shapes.map(s => s.id), state.edges.map(e => e.id))); return; }
+  if (mod && ev.key.toLowerCase() === 's') { ev.preventDefault(); saveJson(); return; }
+  if (mod && ev.key.toLowerCase() === 'o') { ev.preventDefault(); $('#fileOpen').click(); return; }
+  if (ev.key === 'Delete' || ev.key === 'Backspace') { ev.preventDefault(); deleteSelection(); return; }
+  if (ev.key === 'Escape') { if (drag) { drag = null; } setTool('select'); select([]); return; }
+  const tools = { v: 'select', h: 'pan', r: 'rect', e: 'ellipse', l: 'line', t: 'text' };
+  if (!mod && tools[ev.key.toLowerCase()]) { setTool(tools[ev.key.toLowerCase()]); return; }
+  if (!mod && ev.key.toLowerCase() === 'g') { state.showGrid = !state.showGrid; refresh(false); return; }
+  if (!mod && ev.key.toLowerCase() === 'z') { zoomToSelection(); return; }
+  if (!mod && ev.key.toLowerCase() === 's') { state.snap = !state.snap; refresh(false); return; }
+  if (ev.key.startsWith('Arrow') && ui.sel.size) {
+    ev.preventDefault();
+    const step = ev.shiftKey ? state.grid : 1;
+    const dx = ev.key === 'ArrowLeft' ? -step : ev.key === 'ArrowRight' ? step : 0, dy = ev.key === 'ArrowUp' ? -step : ev.key === 'ArrowDown' ? step : 0;
+    pushUndo();
+    for (const id of ui.sel) { const n = nodeById(id); if (n) { n.x += dx; n.y += dy; } const s = shapeById(id); if (s) { s.x += dx; s.y += dy; if (s.kind === 'line') { s.x2 += dx; s.y2 += dy; } } }
+    refresh(false);
+  }
+});
+window.addEventListener('keyup', ev => { if (ev.key === ' ') { ui.space = false; if (ui.tool !== 'pan') svg.classList.remove('tool-pan'); } });
+// ---------- icon palette ----------
+function renderPalette() {
+  const q = $('#search').value.trim().toLowerCase();
+  const list = $('#plist'); list.innerHTML = '';
+  let any = false;
+  for (const cat of CAT_ORDER) {
+    const keys = Object.keys(TYPES).filter(k => TYPES[k].cat === cat && (!q || TYPES[k].name.toLowerCase().includes(q) || k.includes(q)));
+    if (!keys.length) continue;
+    any = true;
+    const h = document.createElement('div'); h.className = 'pcat'; h.textContent = cat; list.appendChild(h);
+    for (const k of keys) {
+      const t = TYPES[k];
+      const d = document.createElement('div'); d.className = 'pitem'; d.dataset.type = k; d.title = 'Drag onto the canvas, or click to add';
+      d.innerHTML = iconSvg(t.icon) + '<span class="nm">' + esc(t.name) + '</span><span class="io">' + t.inputs + ' in · ' + t.outputs + ' out</span>';
+      list.appendChild(d);
+    }
+  }
+  if (!any) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'No icons match "' + q + '".'; list.appendChild(e); }
+}
+$('#search').addEventListener('input', renderPalette);
+
+let pdrag = null;
+$('#plist').addEventListener('pointerdown', ev => {
+  const it = ev.target.closest('.pitem'); if (!it || ev.button !== 0) return;
+  pdrag = { type: it.dataset.type, sx: ev.clientX, sy: ev.clientY, moved: false };
+  ev.preventDefault();
+});
+window.addEventListener('pointermove', ev => {
+  if (!pdrag) return;
+  if (!pdrag.moved && Math.hypot(ev.clientX - pdrag.sx, ev.clientY - pdrag.sy) < 4) return;
+  pdrag.moved = true;
+  ghost.style.display = 'block'; ghost.style.left = (ev.clientX + 12) + 'px'; ghost.style.top = (ev.clientY + 12) + 'px';
+  ghost.textContent = TYPES[pdrag.type].name;
+});
+window.addEventListener('pointerup', ev => {
+  if (!pdrag) return;
+  const d = pdrag; pdrag = null; ghost.style.display = 'none';
+  const r = svg.getBoundingClientRect();
+  const over = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+  if (d.moved && !over) return;
+  let wp;
+  if (d.moved) wp = toWorld(ev); else wp = { x: (r.width / 2 - ui.view.x) / ui.view.z, y: (r.height / 2 - ui.view.y) / ui.view.z };
+  addNodeAt(d.type, wp.x - NODE_W / 2, wp.y - 40);
+});
+function addNodeAt(type, x, y) {
+  pushUndo();
+  const n = createNode(type, snap(x), snap(y));
+  // nudge off any node already occupying the same spot
+  while (state.nodes.some(o => Math.abs(o.x - n.x) < 10 && Math.abs(o.y - n.y) < 10)) { n.x += state.grid; n.y += state.grid; }
+  state.nodes.push(n);
+  ui.sel = new Set([n.id]);
+  refresh(true);
+}
+
+// ---------- properties panel ----------
+function fieldRow(label, inner) { return '<div class="field"><label>' + label + '</label>' + inner + '</div>'; }
+function colorField(bind, value) {
+  const auto = !value || value === 'auto';
+  return '<div class="row"><input type="color" data-bind="' + bind + '" value="' + (auto ? '#3596db' : esc(value)) + '"' + (auto ? ' disabled' : '') + '>' +
+    '<label class="row" style="white-space:nowrap"><input type="checkbox" data-bind="' + bind + ':auto"' + (auto ? ' checked' : '') + '> theme colour</label></div>';
+}
+function dashField(bind, v) {
+  const opts = [['solid', 'Solid'], ['dashed', 'Dashed'], ['dotted', 'Dotted'], ['dashdot', 'Dash-dot']];
+  return '<select data-bind="' + bind + '">' + opts.map(o => '<option value="' + o[0] + '"' + (v === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select>';
+}
+function syncPropsHeader() { /* nothing to do for now: the panel is rebuilt on structural changes only */ }
+
+function renderProps() {
+  const ids = Array.from(ui.sel);
+  let html = '';
+  if (ids.length === 0) {
+    propsKey = 'doc';
+    html += '<h3>Diagram</h3>';
+    html += fieldRow('Title', '<input data-bind="doc.title" value="' + esc(state.title) + '">');
+    html += fieldRow('Grid size', '<input type="number" min="5" max="100" step="5" data-bind="doc.grid" value="' + state.grid + '">');
+    html += '<h4>Defaults for new lines</h4>';
+    html += fieldRow('Colour', colorField('doc.defaults.stroke', state.defaults.stroke));
+    html += fieldRow('Thickness', '<input type="number" min="0.5" max="12" step="0.5" data-bind="doc.defaults.width" value="' + state.defaults.width + '">');
+    html += fieldRow('Style', dashField('doc.defaults.dash', state.defaults.dash));
+    html += '<h4>Tips</h4><div class="hint">Drag an icon from the left pane onto the canvas. Drag from an output port to an input port to draw a signal path — lines route around other icons automatically.</div>' +
+      '<div class="hint">Drop a new connection onto an existing line to bundle several signals into one path; a slash with a count marks the trunk and it fans out beside each icon. The far end grows a matching open stub — drag that stub to a port.</div>' +
+      '<div class="hint">Double-click a port to label the signal outside the icon. Connector names inside the icon are edited here when the icon is selected.</div>' +
+      '<div class="hint">Shortcuts: V select · H pan · R rectangle · E ellipse · L line · T text · G grid · S snap · Del delete · Ctrl+D duplicate · Z zoom to selection · Ctrl+Z undo · Space+drag or middle-drag pan · scroll to move · Ctrl+scroll to zoom.</div>';
+    propsEl.innerHTML = html; return;
+  }
+  if (ids.length > 1) {
+    propsKey = 'multi';
+    const edges = selectedEdges();
+    html += '<h3>' + ids.length + ' items selected</h3>';
+    if (edges.length) {
+      html += '<h4>' + edges.length + ' line' + (edges.length > 1 ? 's' : '') + '</h4>';
+      html += fieldRow('Colour', colorField('edges.stroke', edges.every(e => e.stroke === edges[0].stroke) ? edges[0].stroke : 'auto'));
+      html += fieldRow('Thickness', '<input type="number" min="0.5" max="12" step="0.5" data-bind="edges.width" value="' + edges[0].width + '">');
+      html += fieldRow('Style', dashField('edges.dash', edges[0].dash));
+    }
+    html += '<div class="actions"><button data-act="duplicate">Duplicate</button><button data-act="delete" class="danger">Delete</button></div>';
+    propsEl.innerHTML = html; return;
+  }
+  const id = ids[0];
+  const n = nodeById(id);
+  if (n) {
+    propsKey = 'node:' + id;
+    const t = TYPES[n.type];
+    html += '<h3>' + esc(t.name) + '</h3>';
+    html += fieldRow('Name', '<input data-bind="name" value="' + esc(n.name) + '">');
+    if (t.cfgIn) html += fieldRow('Inputs', '<input type="number" min="0" max="64" data-bind="nIn" value="' + n.inputs.length + '">');
+    if (t.cfgOut) html += fieldRow('Outputs', '<input type="number" min="0" max="64" data-bind="nOut" value="' + n.outputs.length + '">');
+    if (!t.cfgIn || !t.cfgOut) html += '<div class="hint">' + n.inputs.length + ' input' + (n.inputs.length === 1 ? '' : 's') + ', ' + n.outputs.length + ' output' + (n.outputs.length === 1 ? '' : 's') + (t.cfgIn || t.cfgOut ? '.' : ' (fixed for this device).') + '</div>';
+    const sideSel = (io, cur) => '<select data-bind="side.' + io + '">' + ['left', 'right', 'top', 'bottom'].map(v => '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + v + '</option>').join('') + '</select>';
+    if (n.inputs.length === 1) html += fieldRow('Input side', sideSel('in', portSide(n, 'in')));
+    if (n.outputs.length === 1) html += fieldRow('Output side', sideSel('out', portSide(n, 'out')));
+    if (n.inputs.length === 1 || n.outputs.length === 1) html += '<div class="hint">A side with a single port can sit on any edge of the icon.</div>';
+    const table = (side, list) => {
+      if (!list.length) return '';
+      let s = '<h4>' + (side === 'in' ? 'Inputs' : 'Outputs') + '</h4><table class="ports"><tr><th>Connector</th><th>Signal label</th></tr>';
+      list.forEach((p, i) => { s += '<tr><td><input data-bind="port.' + side + '.' + i + '.label" value="' + esc(p.label) + '"></td><td><input data-bind="port.' + side + '.' + i + '.sig" value="' + esc(p.sig) + '" placeholder="outside label"></td></tr>'; });
+      return s + '</table>';
+    };
+    html += table('in', n.inputs) + table('out', n.outputs);
+    html += '<div class="actions"><button data-act="duplicate">Duplicate</button><button data-act="delete" class="danger">Delete</button></div>';
+    propsEl.innerHTML = html; return;
+  }
+  const e = edgeById(id);
+  if (e) {
+    propsKey = 'edge:' + id;
+    html += '<h3>Signal path</h3>';
+    html += fieldRow('Colour', colorField('edge.stroke', e.stroke));
+    html += fieldRow('Thickness', '<input type="number" min="0.5" max="12" step="0.5" data-bind="edge.width" value="' + e.width + '">');
+    html += fieldRow('Style', dashField('edge.dash', e.dash));
+    html += fieldRow('Signals', '<input type="number" min="1" max="99" data-bind="edge.count" value="' + (e.count || 1) + '">');
+    html += '<div class="hint">More than one signal draws a slash with the count on the line.</div>';
+    html += fieldRow('Label', '<input data-bind="edge.label" value="' + esc(e.label || '') + '" placeholder="e.g. 1080p59.94">');
+    const chips = (key, list) => list.map(pid => { const P = findPort(pid); const lbl = P ? esc(P.node.name) + ' · ' + esc(P.port.label) : (isPending(pid) ? '<span style="color:var(--accent)">open stub — drag it to a port</span>' : ''); if (!lbl) return ''; return '<span class="chip">' + lbl + '<button data-act="unlink" data-key="' + key + '" data-pid="' + pid + '" title="Remove from this path">×</button></span>'; }).join('');
+    html += '<h4>From</h4><div class="chips">' + chips('a', e.a) + '</div>';
+    html += '<h4>To</h4><div class="chips">' + chips('b', e.b) + '</div>';
+    html += '<div class="hint">To add another port, drag from that port and drop it onto this line. Drag any segment of the line to move its bends.</div>';
+    html += '<div class="actions"><button data-act="straighten" title="Move the less-connected icon so this line runs straight">Straighten</button>' + (e.route ? '<button data-act="autoroute" title="Discard the hand-placed bends">Auto-route</button>' : '') + '<button data-act="delete" class="danger">Delete</button></div>';
+    propsEl.innerHTML = html; return;
+  }
+  const s = shapeById(id);
+  if (s) {
+    propsKey = 'shape:' + id;
+    const names = { rect: 'Rectangle', ellipse: 'Ellipse', line: 'Line', text: 'Text box' };
+    html += '<h3>' + names[s.kind] + '</h3>';
+    if (s.kind === 'text') {
+      html += '<div class="field" style="grid-template-columns:1fr"><textarea data-bind="shape.text" rows="4">' + esc(s.text) + '</textarea></div>';
+      html += fieldRow('Font size', '<input type="number" min="8" max="72" data-bind="shape.fontSize" value="' + s.fontSize + '">');
+      html += fieldRow('Align', '<select data-bind="shape.align">' + ['left', 'center', 'right'].map(a => '<option value="' + a + '"' + (s.align === a ? ' selected' : '') + '>' + a + '</option>').join('') + '</select>');
+      html += fieldRow('Bold', '<input type="checkbox" data-bind="shape.bold"' + (s.bold ? ' checked' : '') + '>');
+      html += fieldRow('Text colour', colorField('shape.stroke', s.stroke));
+    } else {
+      html += fieldRow('Stroke', colorField('shape.stroke', s.stroke));
+      html += fieldRow('Thickness', '<input type="number" min="0.5" max="12" step="0.5" data-bind="shape.width" value="' + s.width + '">');
+      html += fieldRow('Style', dashField('shape.dash', s.dash));
+      if (s.kind === 'line') html += fieldRow('Arrowhead', '<input type="checkbox" data-bind="shape.arrow"' + (s.arrow ? ' checked' : '') + '>');
+    }
+    if (s.kind !== 'line') {
+      const noFill = !s.fill || s.fill === 'none';
+      html += fieldRow('Fill', '<div class="row"><input type="color" data-bind="shape.fill" value="' + (noFill ? '#3a3a3a' : esc(s.fill)) + '"' + (noFill ? ' disabled' : '') + '><label class="row" style="white-space:nowrap"><input type="checkbox" data-bind="shape.fill:none"' + (noFill ? ' checked' : '') + '> no fill</label></div>');
+    }
+    html += '<div class="actions"><button data-act="duplicate">Duplicate</button><button data-act="delete" class="danger">Delete</button></div>';
+    propsEl.innerHTML = html; return;
+  }
+  propsEl.innerHTML = '';
+}
+
+function applyBind(bind, inp) {
+  const val = inp.type === 'checkbox' ? inp.checked : inp.value;
+  const num = parseFloat(val);
+  const id = Array.from(ui.sel)[0];
+  let structural = false;
+  if (bind.endsWith(':auto') || bind.endsWith(':none')) {
+    const base = bind.split(':')[0]; const sib = propsEl.querySelector('[data-bind="' + base + '"]');
+    if (val) { setPath(base, bind.endsWith(':auto') ? 'auto' : 'none'); if (sib) sib.disabled = true; }
+    else { if (sib) { sib.disabled = false; setPath(base, sib.value); } }
+    refresh(false); return;
+  }
+  function setPath(path, v) {
+    if (path === 'name') { nodeById(id).name = v; return; }
+    if (path.startsWith('doc.defaults.')) { state.defaults[path.slice(13)] = path.endsWith('width') ? (parseFloat(v) || 2) : v; return; }
+    if (path === 'doc.title') { state.title = v; return; }
+    if (path === 'doc.grid') { state.grid = clamp(parseFloat(v) || 20, 5, 100); return; }
+    if (path.startsWith('edges.')) { const k = path.slice(6); for (const e of selectedEdges()) e[k] = k === 'width' ? (parseFloat(v) || 2) : v; return; }
+    if (path.startsWith('edge.')) { const k = path.slice(5); const e = edgeById(id); if (k === 'width') e.width = parseFloat(v) || 2; else if (k === 'count') e.count = clamp(Math.round(parseFloat(v) || 1), 1, 99); else e[k] = v; return; }
+    if (path.startsWith('shape.')) { const k = path.slice(6); const s = shapeById(id); if (k === 'width' || k === 'fontSize') s[k] = parseFloat(v) || (k === 'width' ? 1.5 : 13); else s[k] = v; return; }
+    if (path.startsWith('side.')) { const n = nodeById(id); n.sides = n.sides || { in: 'left', out: 'right' }; n.sides[path.slice(5)] = v; sizeNode(n); return; }
+    if (path.startsWith('port.')) { const [, side, i, k] = path.split('.'); const n = nodeById(id); (side === 'in' ? n.inputs : n.outputs)[+i][k] = v; return; }
+    if (path === 'nIn' || path === 'nOut') { setPortCount(nodeById(id), path === 'nIn' ? 'in' : 'out', num); structural = true; return; }
+  }
+  setPath(bind, val);
+  pruneSelection();
+  refresh(structural);
+}
+let bindUndoTimer = null, bindUndoKey = '';
+propsEl.addEventListener('input', ev => {
+  const b = ev.target.dataset.bind; if (!b) return;
+  const key = propsKey + '|' + b;
+  if (key !== bindUndoKey) { pushUndo(); bindUndoKey = key; }
+  clearTimeout(bindUndoTimer); bindUndoTimer = setTimeout(() => { bindUndoKey = ''; }, 1500);
+  applyBind(b, ev.target);
+});
+propsEl.addEventListener('change', ev => {
+  const b = ev.target.dataset.bind; if (!b) return;
+  if (ev.target.tagName === 'SELECT' || ev.target.type === 'checkbox' || ev.target.type === 'number') {
+    const key = propsKey + '|' + b; if (key !== bindUndoKey) { pushUndo(); bindUndoKey = ''; }
+    applyBind(b, ev.target);
+  }
+});
+propsEl.addEventListener('click', ev => {
+  const btn = ev.target.closest('[data-act]'); if (!btn) return;
+  const act = btn.dataset.act;
+  if (act === 'delete') deleteSelection();
+  else if (act === 'duplicate') duplicateSelection();
+  else if (act === 'straighten') { const e = edgeById(Array.from(ui.sel)[0]); if (e) straightenEdge(e); }
+  else if (act === 'autoroute') { const e = edgeById(Array.from(ui.sel)[0]); if (e) { pushUndo(); delete e.route; refresh(true); } }
+  else if (act === 'unlink') {
+    const e = edgeById(Array.from(ui.sel)[0]); if (!e) return;
+    pushUndo(); e[btn.dataset.key] = e[btn.dataset.key].filter(p => p !== btn.dataset.pid);
+    if (!hasReal(e.a) || !hasReal(e.b)) { state.edges = state.edges.filter(x => x !== e); ui.sel.clear(); }
+    refresh(true);
+  }
+});
+
+// ---------- auto arrange ----------
+function layeredOrder(exclude) {
+  const nodes = state.nodes, idx = new Map(nodes.map((n, i) => [n.id, i]));
+  const succ = nodes.map(() => []), pred = nodes.map(() => []);   // [neighbour, fractional port position]
+  for (const e of state.edges) for (const pa of e.a) for (const pb of e.b) {
+    if (exclude && exclude.has(e.id)) continue;
+    const A = findPort(pa), B = findPort(pb); if (!A || !B || A.node === B.node) continue;
+    const u = idx.get(A.node.id), v = idx.get(B.node.id);
+    // each entry remembers where the line lands on the neighbour, so nodes sharing a neighbour sort by its port order
+    succ[u].push([v, (B.index + 0.5) / B.node.inputs.length]);
+    pred[v].push([u, (A.index + 0.5) / A.node.outputs.length]);
+  }
+  const succSet = succ.map(l => new Set(l.map(x => x[0]))), predSet = pred.map(l => new Set(l.map(x => x[0])));
+  const st = new Array(nodes.length).fill(0), back = [];
+  const dfs = u => { st[u] = 1; for (const v of succSet[u]) { if (st[v] === 1) back.push([u, v]); else if (!st[v]) dfs(v); } st[u] = 2; };
+  for (let i = 0; i < nodes.length; i++) if (!st[i]) dfs(i);
+  for (const [u, v] of back) { succSet[u].delete(v); predSet[v].delete(u); }
+  const layer = new Array(nodes.length).fill(-1);
+  const rank = u => { if (layer[u] >= 0) return layer[u]; layer[u] = 0; let l = 0; for (const p of predSet[u]) l = Math.max(l, rank(p) + 1); layer[u] = l; return l; };
+  for (let i = 0; i < nodes.length; i++) rank(i);
+  for (let i = 0; i < nodes.length; i++) if (!succSet[i].size && predSet[i].size) { let l = 0; for (const p of predSet[i]) l = Math.max(l, layer[p] + 1); layer[i] = l; }
+  const L = Math.max(...layer) + 1;
+  const cols = Array.from({ length: L }, () => []);
+  nodes.forEach((n, i) => cols[layer[i]].push(i));
+  // order within each layer so that lines follow port order: barycenter weighted by where the port sits on the neighbour
+  const pos = new Array(nodes.length).fill(0);
+  cols.forEach(c => c.forEach((u, k) => pos[u] = k));
+  const bary = (u, nb, keepSet) => {
+    const arr = nb.filter(x => keepSet.has(x[0]) && layer[x[0]] !== layer[u]);
+    if (!arr.length) return null;
+    // sort by neighbour position, then by the port position on that neighbour (this is what keeps parallel paths uncrossed)
+    return arr.reduce((s, x) => s + pos[x[0]] * 10 + x[1] * 9, 0) / arr.length;
+  };
+  const sortLayer = (l, useSucc) => {
+    const keys = new Map();
+    for (const u of cols[l]) { const b = bary(u, useSucc ? succ[u] : pred[u], useSucc ? succSet[u] : predSet[u]); keys.set(u, b == null ? pos[u] * 10 : b); }
+    cols[l].sort((a, b) => keys.get(a) - keys.get(b) || pos[a] - pos[b]);
+    cols[l].forEach((u, k) => pos[u] = k);
+  };
+  for (let sweep = 0; sweep < 6; sweep++) {
+    for (let l = 1; l < L; l++) sortLayer(l, false);
+    for (let l = L - 2; l >= 0; l--) sortLayer(l, true);
+  }
+  for (let l = 1; l < L; l++) sortLayer(l, false);
+  // then swap adjacent nodes whenever that removes crossings (counted per port, both to the previous and next layer)
+  const keysOf = (u, nb, keepSet) => nb.filter(x => keepSet.has(x[0]) && layer[x[0]] !== layer[u]).map(x => pos[x[0]] * 10 + x[1] * 9);
+  const cross = (u, v) => { // crossings if u sits directly above v
+    let n = 0;
+    for (const [nbs, sets] of [[pred, predSet], [succ, succSet]]) {
+      const ku = keysOf(u, nbs[u], sets[u]), kv = keysOf(v, nbs[v], sets[v]);
+      for (const a of ku) for (const b of kv) if (a > b) n++;
+    }
+    return n;
+  };
+  for (let round = 0; round < 12; round++) {
+    let improved = false;
+    for (let l = 0; l < L; l++) {
+      const c = cols[l];
+      for (let k = 0; k + 1 < c.length; k++) {
+        if (cross(c[k + 1], c[k]) < cross(c[k], c[k + 1])) { [c[k], c[k + 1]] = [c[k + 1], c[k]]; c.forEach((u, i) => pos[u] = i); improved = true; }
+      }
+    }
+    if (!improved) break;
+  }
+  return { cols, layer, succSet, predSet };
+}
+function autoArrange(mode) {
+  if (!state.nodes.length) return;
+  pushUndo();
+  const nodes = state.nodes;
+  let { cols, layer, succSet, predSet } = layeredOrder();
+  const L = cols.length;
+  if (mode === 'fanout') { arrangeSpider(nodes, cols, layer, succSet, predSet); refresh(false); fitView(); return;
+  } else {
+    for (const e of state.edges) delete e.route;
+    for (const n of nodes) { n.sides = { in: 'left', out: 'right' }; sizeNode(n); }
+    // A single-input leaf fed from a lower port of a two-link source (Computer OUT 2 -> Monitor) would force a
+    // crossing in the next column; tuck it under its source with the input on top instead.
+    const idx = new Map(nodes.map((n, i) => [n.id, i]));
+    const under = new Map(); // source index -> leaf index
+    const tuckedEdges = new Set();
+    for (const e of state.edges) {
+      if (e.a.length !== 1 || e.b.length !== 1) continue;
+      const A = findPort(e.a[0]), B = findPort(e.b[0]); if (!A || !B) continue;
+      const u = idx.get(A.node.id), v = idx.get(B.node.id);
+      const leaf = B.node.inputs.length === 1 && !succSet[v].size && predSet[v].size === 1;
+      const srcLinks = succSet[u].size + predSet[u].size;
+      if (!leaf || srcLinks !== 2 || under.has(u) || A.index === 0) continue;
+      if (![...succSet[u]].some(w => w !== v && layer[w] === layer[u] + 1)) continue;
+      under.set(u, v); tuckedEdges.add(e.id); B.node.sides.in = 'right'; sizeNode(B.node);   // fed from above on the right; never a top port
+    }
+    if (tuckedEdges.size) cols = layeredOrder(tuckedEdges).cols;   // re-order without the tucked links pulling on their sources
+    const tucked = new Set(under.values());
+    const cols2 = cols.map(c => c.filter(u => !tucked.has(u))).filter(c => c.length);
+    const GAPX = 160, GAPY = 40, TUCK = 50;
+    const stackH = u => nodes[u].h + (under.has(u) ? TUCK + nodes[under.get(u)].h : 0);
+    const heights = cols2.map(c => c.reduce((s, u) => s + stackH(u), 0) + GAPY * Math.max(0, c.length - 1));
+    const maxH = Math.max(...heights);
+    let x = 0;
+    cols2.forEach((c, l) => {
+      let y = (maxH - heights[l]) / 2;
+      for (const u of c) {
+        nodes[u].x = snap(x); nodes[u].y = snap(y);
+        if (under.has(u)) { const v = under.get(u); nodes[v].x = snap(x); nodes[v].y = snap(y + nodes[u].h + TUCK); }
+        y += stackH(u) + GAPY;
+      }
+      // leave room for outside signal labels on both sides of the gap
+      const outExt = Math.max(0, ...c.map(u => nodeLabelExt(nodes[u], 'out')));
+      const inExt = l + 1 < cols2.length ? Math.max(0, ...cols2[l + 1].map(u => nodeLabelExt(nodes[u], 'in'))) : 0;
+      x += NODE_W + GAPX + outExt + inExt;
+    });
+  }
+  refresh(false);
+  fitView();
+}
+
+// Portrait / hub-and-spoke arrangement.
+// Devices that talk to three or more others are hubs; hubs step down the page (each layer below and a little
+// to the right of the previous one, same-layer hubs stacked). Everything else gathers around the hub it talks
+// to, ordered by the hub port it uses: low-numbered ports above, middle ports beside (level with their port so the
+// line is straight), high-numbered ports below. Pass-through chains run horizontally, each link level with its
+// neighbour's port.
+function arrangeSpider(nodes, cols, layer, succSet, predSet) {
+  const N = nodes.length;
+  const idx = new Map(nodes.map((n, i) => [n.id, i]));
+  const nb = i => Array.from(new Set([...succSet[i], ...predSet[i]]));
+  const hub = new Array(N).fill(false);
+  for (let i = 0; i < N; i++) hub[i] = nb(i).length >= 3;
+  for (let i = 0; i < N; i++) if (!hub[i] && nb(i).filter(j => hub[j]).length >= 2) hub[i] = true;
+  const isolated = new Set(); for (let i = 0; i < N; i++) if (!nb(i).length) isolated.add(i);
+  const parent = new Array(N).fill(-1), depth = new Array(N).fill(-1), attach = new Array(N).fill(-1);
+  const q = [];
+  for (let i = 0; i < N; i++) if (hub[i]) { depth[i] = 0; attach[i] = i; q.push(i); }
+  const bfs = () => { while (q.length) { const u = q.shift(); for (const v of nb(u)) if (depth[v] < 0 && !hub[v]) { depth[v] = depth[u] + 1; parent[v] = u; attach[v] = attach[u]; q.push(v); } } };
+  bfs();
+  for (let i = 0; i < N; i++) if (depth[i] < 0 && !isolated.has(i)) { hub[i] = true; depth[i] = 0; attach[i] = i; q.push(i); bfs(); }
+  // the port pair joining two adjacent nodes u (nearer the hub) and v
+  const link = (u, v) => {
+    for (const e of state.edges) for (const pa of e.a) for (const pb of e.b) {
+      const A = isPending(pa) ? null : findPort(pa), B = isPending(pb) ? null : findPort(pb); if (!A || !B) continue;
+      const ia = idx.get(A.node.id), ib = idx.get(B.node.id);
+      if (ia === u && ib === v) return { u: A, v: B, feeds: false };
+      if (ia === v && ib === u) return { u: B, v: A, feeds: true };
+    }
+    return null;
+  };
+  const GX = 90, GY = 100, ROWX = 40, GAP_ROW = 40, PH = 74;
+  const kidsOf = u => nb(u).filter(v => parent[v] === u);
+  const chainLen = i => { let l = 0, u = i; for (;;) { const k = kidsOf(u); if (!k.length) break; l++; u = k[0]; } return l; };
+  const setSides = (i, io, side) => { const n = nodes[i]; n.sides = n.sides || { in: 'left', out: 'right' }; n.sides[io] = side; };
+  const orient = (i, slot) => { // rows and chains keep left/right ports; a lone single-port device beside/above/below faces the hub
+    const n = nodes[i];
+    const single = n.inputs.length + n.outputs.length === 1;
+    if (!single || slot === 'left' || slot === 'right') {
+      if (slot === 'left' || slot === 'right') {
+        const toward = slot === 'left' ? 'right' : 'left', away = slot;
+        const L = link(parent[i], i);
+        if (L && L.feeds) { setSides(i, 'out', toward); setSides(i, 'in', away); } else { setSides(i, 'in', toward); setSides(i, 'out', away); }
+      } else { setSides(i, 'in', 'left'); setSides(i, 'out', 'right'); }
+    } else if (slot === 'row') { setSides(i, 'in', 'left'); setSides(i, 'out', 'right'); }
+    else if (n.inputs.length) { setSides(i, 'in', slot === 'top' ? 'bottom' : 'right'); setSides(i, 'out', 'right'); } // sink: fed from the hub's output side
+    else { setSides(i, 'out', 'left'); setSides(i, 'in', 'left'); }                                                    // source: runs down the hub's input side
+    sizeNode(n);
+  };
+  const portY = (i, P) => portPos(nodes[i], P.side, P.index).y - nodes[i].y;   // port offset inside its icon
+  const rel = new Map(), slotOf = new Map();
+  // does device i use the same side for its hub link and its onward chain? (then a row placement forces a crossing)
+  const sameSide = i => { const L = link(parent[i], i); if (!L) return false; for (const v of kidsOf(i)) { const K = link(i, v); if (K && K.u.side === L.v.side) return true; } return false; };
+  const placeChain = (u, slot) => {
+    const pu = rel.get(u), nu = nodes[u];
+    kidsOf(u).forEach((v, k) => {
+      const L = link(u, v);
+      orient(v, slot === 'left' || slot === 'right' ? slot : 'row'); slotOf.set(v, slot);
+      let dy = L ? portY(u, L.u) - portY(v, L.v) : 0;   // level the joined ports
+      if (slot === 'left' || slot === 'right') {
+        // the parent's port toward this child faces the hub, so the line has to wrap under the parent: drop the child below it
+        const wraps = L && ((slot === 'left') === !L.feeds);
+        if (wraps) dy = nu.h + 30 - (L ? portY(v, L.v) : 0);
+        const gx = GX + nodeLabelExt(nodes[v], 'in') + nodeLabelExt(nodes[v], 'out') + nodeLabelExt(nu, 'in') + nodeLabelExt(nu, 'out');
+        rel.set(v, { x: slot === 'left' ? pu.x - (NODE_W + gx) : pu.x + NODE_W + gx, y: pu.y + dy + k * (PH + GAP_ROW) });
+      } else { const rx = ROWX + nodeLabelExt(nodes[v], 'in') + nodeLabelExt(nodes[v], 'out') + nodeLabelExt(nu, 'in') + nodeLabelExt(nu, 'out'); rel.set(v, { x: pu.x + (L && L.feeds ? -(NODE_W + rx) : NODE_W + rx), y: pu.y + dy + k * (PH + GAP_ROW) }); } // rows: sources to the left, sinks to the right
+      placeChain(v, slot);
+    });
+  };
+  for (let h = 0; h < N; h++) {
+    if (!hub[h]) continue;
+    const H = nodes[h]; rel.set(h, { x: 0, y: 0 });
+    const direct = []; for (let i = 0; i < N; i++) if (depth[i] === 1 && parent[i] === h) direct.push(i);
+    const info = new Map(direct.map(i => { const L = link(h, i); return [i, { L, feeds: L ? L.feeds : false, pidx: L ? L.u.index : 0, pn: L ? (L.u.side === 'in' ? H.inputs.length : H.outputs.length) : 1 }]; }));
+    const byPort = (a, b) => info.get(a).pidx - info.get(b).pidx;
+    const rows = { top: [], bottom: [] };
+    for (const [slot, list] of [['left', direct.filter(i => info.get(i).feeds)], ['right', direct.filter(i => !info.get(i).feeds)]]) {
+      let beside = list.slice().sort(byPort);
+      // long chains run along the row above or below the hub (keeps the page narrow); short ones sit beside it
+      for (const i of beside.slice()) if (chainLen(i) >= 2 && !sameSide(i)) { beside = beside.filter(x => x !== i); rows[info.get(i).pidx < info.get(i).pn / 2 ? 'top' : 'bottom'].push(i); }
+      const cap = Math.max(1, Math.ceil((H.h + GAP_ROW) / (PH + GAP_ROW)));
+      // too many for the side column: spill to the rows above/below, taking the most extreme ports first and
+      // keeping devices whose chain would cross in a row beside the hub
+      const extremity = i => Math.abs(info.get(i).pidx + 0.5 - info.get(i).pn / 2);
+      const spill = beside.slice().sort((a, b) => (sameSide(a) ? 1 : 0) - (sameSide(b) ? 1 : 0) || extremity(b) - extremity(a) || info.get(b).pidx - info.get(a).pidx);
+      for (let k = 0; beside.length > cap && k < spill.length; k++) {
+        const i = spill[k]; beside = beside.filter(x => x !== i);
+        rows[info.get(i).pidx < info.get(i).pn / 2 ? 'top' : 'bottom'].push(i);
+      }
+      // beside: level each device with the hub port it uses, pushing down where they would overlap
+      let yPrev = -Infinity;
+      for (const i of beside) {
+        orient(i, slot); slotOf.set(i, slot);
+        const inf = info.get(i);
+        let y = inf.L ? portY(h, inf.L.u) - portY(i, inf.L.v) : 0;
+        if (y < yPrev) y = yPrev;
+        const gx = GX + nodeLabelExt(nodes[i], slot === 'left' ? 'out' : 'in') + nodeLabelExt(H, slot === 'left' ? 'in' : 'out');
+        rel.set(i, { x: slot === 'left' ? -(NODE_W + gx) : NODE_W + gx, y });
+        // a chain partner that has to wrap under this device needs a clear corridor below it
+        const wrapsBelow = kidsOf(i).some(v => { const L = link(i, v); return L && ((slot === 'left') === !L.feeds); });
+        yPrev = y + nodes[i].h + GAP_ROW + (wrapsBelow ? 30 : 0);
+      }
+    }
+    for (const slot of ['top', 'bottom']) {
+      const items = rows[slot]; if (!items.length) continue;
+      items.sort((a, b) => (info.get(b).feeds ? 1 : 0) - (info.get(a).feeds ? 1 : 0) || byPort(a, b)); // sources left, sinks right, each in port order
+      for (const i of items) orient(i, slot);
+      const groupW = i => (chainLen(i) + 1) * NODE_W + chainLen(i) * ROWX;
+      const totalW = items.reduce((s, i) => s + groupW(i), 0) + ROWX * (items.length - 1);
+      const rowH = Math.max(...items.map(i => nodes[i].h)) + 30;
+      let x = H.w / 2 - totalW / 2;
+      for (const i of items) {
+        const headX = info.get(i).feeds ? x + chainLen(i) * (NODE_W + ROWX) : x;
+        rel.set(i, { x: headX, y: slot === 'top' ? -(rowH + GY) : H.h + GY }); slotOf.set(i, slot);
+        x += groupW(i) + ROWX;
+      }
+    }
+    for (const i of direct) placeChain(i, slotOf.get(i));
+  }
+  const cells = new Map();
+  for (let h = 0; h < N; h++) if (hub[h]) {
+    let minx = 0, miny = 0, maxx = nodes[h].w, maxy = nodes[h].h;
+    for (let i = 0; i < N; i++) if (attach[i] === h && rel.has(i)) { const p = rel.get(i); minx = Math.min(minx, p.x); miny = Math.min(miny, p.y); maxx = Math.max(maxx, p.x + nodes[i].w); maxy = Math.max(maxy, p.y + nodes[i].h); }
+    cells.set(h, { minx, miny, w: maxx - minx, h: maxy - miny });
+  }
+  // staircase: each layer of hubs sits below the previous one and starts just right of the previous hub's
+  // output side, so trunks run right then down into the next inputs; same-layer hubs stack in port order
+  const hubCols = cols.map(c => c.filter(i => hub[i])).filter(c => c.length);
+  const STAIR = 140, CGY = 90;
+  let y = 0, prevRight = null;
+  for (const col of hubCols) {
+    let hubX = 0;
+    if (prevRight != null) { const leftW = Math.max(...col.map(h => -cells.get(h).minx)); hubX = prevRight + STAIR + leftW; }
+    for (const h of col) {
+      const c = cells.get(h);
+      const hy = y - c.miny;
+      for (let i = 0; i < N; i++) if (attach[i] === h && rel.has(i)) { const p = rel.get(i); nodes[i].x = snap(hubX + p.x); nodes[i].y = snap(hy + p.y); }
+      y += c.h + CGY;
+    }
+    prevRight = hubX + NODE_W;
+  }
+  let ix = 0;
+  for (const i of isolated) { const n = nodes[i]; n.sides = { in: 'left', out: 'right' }; sizeNode(n); n.x = snap(ix); n.y = snap(y + 20); ix += NODE_W + ROWX; }
+  for (const e of state.edges) delete e.route;
+}
+
+// ---------- file I/O ----------
+function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+function safeName() { return (state.title || 'diagram').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'diagram'; }
+function saveJson() { download(safeName() + '.videodraw.json', new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })); toast('Saved ' + safeName() + '.videodraw.json'); }
+function loadDoc(obj) {
+  const d = blankDoc();
+  Object.assign(d, obj);
+  d.defaults = Object.assign(blankDoc().defaults, obj.defaults || {});
+  for (const n of d.nodes) { if (!TYPES[n.type]) n.type = 'gin'; n.inputs = n.inputs || []; n.outputs = n.outputs || []; n.sides = n.sides || { in: 'left', out: 'right' }; sizeNode(n); }
+  d.edges = (d.edges || []).filter(e => e.a && e.b);
+  state = d; ui.sel.clear(); undoStack.length = 0; redoStack.length = 0;
+  refresh(true); fitView();
+}
+$('#fileOpen').addEventListener('change', ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  f.text().then(txt => { try { loadDoc(JSON.parse(txt)); toast('Opened ' + f.name); } catch (e) { toast('That file is not a Video Draw diagram.'); } });
+  ev.target.value = '';
+});
+
+// ---------- export ----------
+const PAGES = { letter: [8.5, 11], legal: [8.5, 14], tabloid: [11, 17], a4: [8.27, 11.69], a3: [11.69, 16.54], a5: [5.83, 8.27] };
+function exportPlan() {
+  const page = $('#exPage').value, dpi = +$('#exDpi').value, fit = $('#exFit').checked, margin = +$('#exMargin').value;
+  const b = contentBounds(); b.x -= 20; b.y -= 20; b.w += 40; b.h += 40;
+  let inW, inH, scale, ox, oy;   // scale: inches per diagram pixel; ox/oy: inch offset of the diagram origin
+  if (page === 'auto') { scale = 1 / 96; inW = b.w * scale + 0.4; inH = b.h * scale + 0.4; ox = 0.2 - b.x * scale; oy = 0.2 - b.y * scale; }
+  else {
+    let [pw, ph] = PAGES[page];
+    const orient = $('#exOrient').value;
+    if (orient === 'landscape' || (orient === 'auto' && b.w > b.h)) [pw, ph] = [ph, pw];
+    inW = pw; inH = ph;
+    const aw = pw - 2 * margin, ah = ph - 2 * margin;
+    scale = fit ? Math.min(aw / b.w, ah / b.h) : 1 / 96;
+    ox = margin + (aw - b.w * scale) / 2 - b.x * scale; oy = margin + (ah - b.h * scale) / 2 - b.y * scale;
+  }
+  return { inW, inH, scale, ox, oy, dpi, pxW: Math.round(inW * dpi), pxH: Math.round(inH * dpi), page, bounds: b };
+}
+function updateExportInfo() {
+  const page = $('#exPage').value;
+  $$('.exPageOpt').forEach(el => el.style.display = page === 'auto' ? 'none' : '');
+  $('#exTransRow').style.display = $('#exFmt').value === 'png' ? '' : 'none';
+  const P = exportPlan();
+  const pct = Math.round(P.scale * 96 * 100);
+  $('#exInfo').textContent = P.inW.toFixed(2) + ' × ' + P.inH.toFixed(2) + ' in · ' + P.pxW + ' × ' + P.pxH + ' px · diagram at ' + pct + '%' +
+    (P.page !== 'auto' && !$('#exFit').checked && pct === 100 && (P.bounds.w / 96 > P.inW || P.bounds.h / 96 > P.inH) ? ' — larger than the page, it will be cropped' : '');
+}
+function buildExportSvg(th, P, showGrid, transparent) {
+  const root = document.createElementNS(NS, 'svg');
+  root.setAttribute('xmlns', NS);
+  root.setAttribute('width', P.pxW); root.setAttribute('height', P.pxH);
+  root.setAttribute('viewBox', '0 0 ' + P.inW + ' ' + P.inH);
+  root.setAttribute('font-family', FONT);
+  if (!transparent) el('rect', { x: 0, y: 0, width: P.inW, height: P.inH, fill: th.paper }, root);
+  th = Object.assign({}, th, { canvas: transparent ? 'none' : th.paper });
+  const clip = el('clipPath', { id: 'pageClip' }, el('defs', {}, root));
+  el('rect', { x: 0, y: 0, width: P.inW, height: P.inH }, clip);
+  const outer = el('g', { 'clip-path': 'url(#pageClip)' }, root);   // clip in page space, then place the diagram inside
+  const cont = el('g', { transform: 'translate(' + P.ox + ' ' + P.oy + ') scale(' + P.scale + ')' }, outer);
+  ['lGrid', 'lShapes', 'lEdges', 'lNodes'].forEach(c => el('g', { class: c }, cont));
+  if (showGrid) { const gl = cont.querySelector('.lGrid'); renderGrid(gl, th, state.grid, true); const r = gl.querySelector('rect'); const b = P.bounds; r.setAttribute('x', b.x); r.setAttribute('y', b.y); r.setAttribute('width', b.w); r.setAttribute('height', b.h); }
+  renderShapes(cont.querySelector('.lShapes'), th, false);
+  renderEdges(cont.querySelector('.lEdges'), th, false);
+  renderNodes(cont.querySelector('.lNodes'), th, false);
+  return root;
+}
+function svgToCanvas(svgEl, w, h) {
+  return new Promise((resolve, reject) => {
+    const xml = new XMLSerializer().serializeToString(svgEl);
+    const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml;charset=utf-8' }));
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(c);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('render failed')); };
+    img.src = url;
+  });
+}
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+async function doExport() {
+  const fmt = $('#exFmt').value, th = THEMES[$('#exTheme').value];
+  const P = exportPlan();
+  if (P.pxW * P.pxH > 120e6) { toast('That page and resolution is too large to render in the browser — lower the resolution'); return; }
+  const svgEl = buildExportSvg(th, P, $('#exGrid').checked, fmt === 'png' && $('#exTrans').checked);
+  $('#dlgExport').close();
+  setStatus('Exporting…');
+  try {
+    const canvas = await svgToCanvas(svgEl, P.pxW, P.pxH);
+    if (fmt === 'png') {
+      canvas.toBlob(blob => { download(safeName() + '.png', blob); toast('Exported ' + safeName() + '.png'); setStatus('Ready'); }, 'image/png');
+      return;
+    }
+    if (!window.jspdf) {
+      try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'); }
+      catch (e) {
+        const win = window.open('', '_blank');
+        if (!win) { toast('PDF library unavailable offline and the print window was blocked — export PNG instead'); setStatus('Ready'); return; }
+        win.document.write('<!DOCTYPE html><title>' + esc(state.title) + '</title><style>body{margin:0;background:' + th.paper + '}img{width:' + P.inW + 'in;height:' + P.inH + 'in;display:block}@page{size:' + P.inW + 'in ' + P.inH + 'in;margin:0}</style><img src="' + canvas.toDataURL('image/png') + '">');
+        win.document.close(); win.focus(); setTimeout(() => win.print(), 300);
+        setStatus('Ready'); toast('PDF library unavailable offline — use the print dialog to save as PDF'); return;
+      }
+    }
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: P.inW > P.inH ? 'landscape' : 'portrait', unit: 'in', format: [P.inW, P.inH], compress: true });
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, P.inW, P.inH, undefined, 'FAST');
+    pdf.save(safeName() + '.pdf');
+    toast('Exported ' + safeName() + '.pdf');
+  } catch (e) { console.error(e); toast('Export failed: ' + e.message); }
+  setStatus('Ready');
+}
+
+// ---------- toolbar ----------
+document.addEventListener('click', ev => {
+  const tb = ev.target.closest('[data-tool]'); if (tb) { setTool(tb.dataset.tool); return; }
+  const b = ev.target.closest('header [data-act], footer [data-act], dialog [data-act]'); if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'new') { if (!state.nodes.length && !state.shapes.length || confirm('Start a new diagram? Unsaved changes will be lost.')) { state = blankDoc(); ui.sel.clear(); undoStack.length = 0; redoStack.length = 0; ui.view = { x: 80, y: 80, z: 1 }; setView(); refresh(true); } }
+  else if (act === 'open') $('#fileOpen').click();
+  else if (act === 'save') saveJson();
+  else if (act === 'undo') undo();
+  else if (act === 'redo') redo();
+  else if (act === 'arrange') autoArrange('linear');
+  else if (act === 'arrangeFan') autoArrange('fanout');
+  else if (act === 'clearPaths') {
+    if (!state.edges.length) { toast('There are no paths to delete'); return; }
+    if (!confirm('Delete all ' + state.edges.length + ' signal path' + (state.edges.length === 1 ? '' : 's') + '? Icons and shapes stay. You can undo this.')) return;
+    pushUndo(); const n = state.edges.length; state.edges = []; pruneSelection(); refresh(true); toast('Deleted ' + n + ' path' + (n === 1 ? '' : 's'));
+  }
+  else if (act === 'zoomSel') zoomToSelection();
+  else if (act === 'grid') { state.showGrid = !state.showGrid; refresh(false); }
+  else if (act === 'snap') { state.snap = !state.snap; refresh(false); }
+  else if (act === 'export') { $('#exTheme').value = 'light'; updateExportInfo(); $('#dlgExport').showModal(); }
+  else if (act === 'exCancel') $('#dlgExport').close();
+  else if (act === 'exGo') doExport();
+  else if (act === 'theme') { ui.theme = ui.theme === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('videodraw.theme', ui.theme); } catch (e) {} applyTheme(); refresh(false); }
+  else if (act === 'zoomIn') zoomBy(1.25);
+  else if (act === 'zoomOut') zoomBy(0.8);
+  else if (act === 'fit') fitView();
+});
+$('#dlgExport').addEventListener('change', updateExportInfo);
+
+// ---------- sample diagram ----------
+function sampleDoc() {
+  const d = blankDoc(); d.title = 'Sample studio';
+  const cam1 = createNode('camera', 0, 0), cam2 = createNode('camera', 0, 120), pc = createNode('computer', 0, 240);
+  const sw = createNode('atem1', 380, 40), rec = createNode('hyperdeck', 780, 0), mon = createNode('monitor', 780, 160), tv = createNode('tv', 780, 300);
+  cam1.name = 'Camera 1'; cam2.name = 'Camera 2'; pc.name = 'Graphics PC'; mon.name = 'Multiview monitor'; tv.name = 'Lobby TV';
+  tv.inputs = makePorts(TYPES.tv, 'in', 2); sizeNode(tv);
+  cam1.outputs[0].sig = 'SDI 1080p59.94'; cam2.outputs[0].sig = 'SDI 1080p59.94'; pc.outputs[0].sig = 'HDMI';
+  sw.inputs[0].sig = 'CAM 1'; sw.inputs[1].sig = 'CAM 2'; sw.inputs[2].sig = 'GFX';
+  d.nodes.push(cam1, cam2, pc, sw, rec, mon, tv);
+  const E = (a, b, extra) => Object.assign({ id: nid(), a: [a], b: [b], stroke: 'auto', width: 2, dash: 'solid', count: 1, label: '' }, extra || {});
+  d.edges.push(E(cam1.outputs[0].id, sw.inputs[0].id), E(cam2.outputs[0].id, sw.inputs[1].id), E(pc.outputs[0].id, sw.inputs[2].id, { dash: 'dashed' }),
+    E(sw.outputs[0].id, rec.inputs[0].id, { label: 'PGM' }), E(sw.outputs[6].id, mon.inputs[0].id, { stroke: '#3596db' }),
+    { id: nid(), a: [sw.outputs[1].id, sw.outputs[2].id], b: [tv.inputs[0].id, tv.inputs[1].id], stroke: 'auto', width: 2, dash: 'solid', count: 2, label: 'AUX' });
+  return d;
+}
+
+// ---------- init ----------
+(function init() {
+  try { const t = localStorage.getItem('videodraw.theme'); if (t === 'light' || t === 'dark') ui.theme = t; } catch (e) {}
+  applyTheme();
+  renderPalette();
+  setTool('select');
+  let loaded = false;
+  try { const raw = localStorage.getItem('videodraw.doc'); if (raw) { const obj = JSON.parse(raw); if (obj && obj.nodes) { loadDoc(obj); loaded = true; } } } catch (e) {}
+  if (!loaded) loadDoc(sampleDoc());
+  setView();
+  window.addEventListener('resize', () => renderOverlay(overlay, theme()));
+})();
+</script></body></html>

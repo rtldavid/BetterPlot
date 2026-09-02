@@ -1,0 +1,462 @@
+{
+  "title": "Sample studio",
+  "nodes": [
+    {
+      "id": "k1xb2b",
+      "type": "camera",
+      "x": 0,
+      "y": 0,
+      "name": "Camera 1",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "k20ck5",
+          "label": "OUT",
+          "sig": "SDI 1080p59.94"
+        }
+      ],
+      "sides": {
+        "in": "left",
+        "out": "right"
+      },
+      "w": 200,
+      "h": 74
+    },
+    {
+      "id": "k33nfl",
+      "type": "camera",
+      "x": 0,
+      "y": 120,
+      "name": "Camera 2",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "k4vkie",
+          "label": "OUT",
+          "sig": "SDI 1080p59.94"
+        }
+      ],
+      "sides": {
+        "in": "left",
+        "out": "right"
+      },
+      "w": 200,
+      "h": 74
+    },
+    {
+      "id": "k5m915",
+      "type": "computer",
+      "x": 0,
+      "y": 220,
+      "name": "Graphics PC",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "k6gtyo",
+          "label": "OUT",
+          "sig": "HDMI"
+        }
+      ],
+      "sides": {
+        "in": "left",
+        "out": "right"
+      },
+      "w": 200,
+      "h": 74
+    },
+    {
+      "id": "k7xnw7",
+      "type": "atem1",
+      "x": 480,
+      "y": 160,
+      "name": "ATEM 1 Constellation",
+      "inputs": [
+        {
+          "id": "k8dcq2",
+          "label": "IN 1",
+          "sig": "CAM 1"
+        },
+        {
+          "id": "k9v8ma",
+          "label": "IN 2",
+          "sig": "CAM 2"
+        },
+        {
+          "id": "kakr0f",
+          "label": "IN 3",
+          "sig": "GFX"
+        },
+        {
+          "id": "kb1xuy",
+          "label": "IN 4",
+          "sig": ""
+        },
+        {
+          "id": "kc132p",
+          "label": "IN 5",
+          "sig": ""
+        },
+        {
+          "id": "kdspvb",
+          "label": "IN 6",
+          "sig": ""
+        },
+        {
+          "id": "keyaus",
+          "label": "IN 7",
+          "sig": ""
+        },
+        {
+          "id": "kfjxek",
+          "label": "IN 8",
+          "sig": ""
+        },
+        {
+          "id": "kgajxb",
+          "label": "IN 9",
+          "sig": ""
+        },
+        {
+          "id": "khl4sg",
+          "label": "IN 10",
+          "sig": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "kiqm1z",
+          "label": "OUT 1",
+          "sig": ""
+        },
+        {
+          "id": "kjkyiy",
+          "label": "OUT 2",
+          "sig": ""
+        },
+        {
+          "id": "kkgkqk",
+          "label": "OUT 3",
+          "sig": ""
+        },
+        {
+          "id": "klccwm",
+          "label": "OUT 4",
+          "sig": ""
+        },
+        {
+          "id": "kmie1x",
+          "label": "OUT 5",
+          "sig": ""
+        },
+        {
+          "id": "knz2l2",
+          "label": "OUT 6",
+          "sig": ""
+        },
+        {
+          "id": "kovl78",
+          "label": "Multiview",
+          "sig": ""
+        },
+        {
+          "id": "kp8pz1",
+          "label": "Audio L",
+          "sig": ""
+        },
+        {
+          "id": "kqvrjm",
+          "label": "Audio R",
+          "sig": ""
+        }
+      ],
+      "sides": {
+        "in": "left",
+        "out": "right"
+      },
+      "w": 200,
+      "h": 254
+    },
+    {
+      "id": "krq1mk",
+      "type": "hyperdeck",
+      "x": 840,
+      "y": 180,
+      "name": "HyperDeck Studio",
+      "inputs": [
+        {
+          "id": "ks08rk",
+          "label": "SDI IN",
+          "sig": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "ktgyzw",
+          "label": "HDMI OUT",
+          "sig": ""
+        },
+        {
+          "id": "ku02a2",
+          "label": "SDI OUT",
+          "sig": ""
+        }
+      ],
+      "sides": {
+        "in": "left",
+        "out": "right"
+      },
+      "w": 200,
+      "h": 94
+    },
+    {
+      "id": "kva2sw",
+      "type": "monitor",
+      "x": 840,
+      "y": 300,
+      "name": "Multiview monitor",
+      "inputs": [
+        {
+          "id": "kwxmnc",
+          "label": "IN",
+          "sig": ""
+        }
+      ],
+      "outputs": [],
+      "sides": {
+        "in": "left",
+        "out": "right"
+      },
+      "w": 200,
+      "h": 74
+    },
+    {
+      "id": "kxyuwa",
+      "type": "tv",
+      "x": 1200,
+      "y": 240,
+      "name": "Lobby TV",
+      "inputs": [
+        {
+          "id": "kztu88",
+          "label": "IN 1",
+          "sig": ""
+        },
+        {
+          "id": "k107j8f",
+          "label": "IN 2",
+          "sig": ""
+        }
+      ],
+      "outputs": [],
+      "sides": {
+        "in": "left",
+        "out": "right"
+      },
+      "w": 200,
+      "h": 94
+    },
+    {
+      "id": "k19rhbe",
+      "type": "router",
+      "x": 0,
+      "y": 340,
+      "name": "Router matrix",
+      "inputs": [
+        {
+          "id": "k1ajtp3",
+          "label": "IN 1",
+          "sig": ""
+        },
+        {
+          "id": "k1bpa5y",
+          "label": "IN 2",
+          "sig": ""
+        },
+        {
+          "id": "k1c067x",
+          "label": "IN 3",
+          "sig": ""
+        },
+        {
+          "id": "k1df9vh",
+          "label": "IN 4",
+          "sig": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "k1i65uj",
+          "label": "OUT 1",
+          "sig": ""
+        },
+        {
+          "id": "k1jhu2h",
+          "label": "OUT 2",
+          "sig": ""
+        },
+        {
+          "id": "k1kwq2z",
+          "label": "OUT 3",
+          "sig": ""
+        },
+        {
+          "id": "k1li90z",
+          "label": "OUT 4",
+          "sig": ""
+        },
+        {
+          "id": "k1m3a8u",
+          "label": "OUT 5",
+          "sig": ""
+        },
+        {
+          "id": "k1nes72",
+          "label": "OUT 6",
+          "sig": ""
+        },
+        {
+          "id": "k1o93uu",
+          "label": "OUT 7",
+          "sig": ""
+        },
+        {
+          "id": "k1pgrfh",
+          "label": "OUT 8",
+          "sig": ""
+        }
+      ],
+      "sides": {
+        "in": "left",
+        "out": "right"
+      },
+      "w": 200,
+      "h": 214
+    }
+  ],
+  "edges": [
+    {
+      "id": "k11o27m",
+      "a": [
+        "k20ck5"
+      ],
+      "b": [
+        "k8dcq2"
+      ],
+      "stroke": "auto",
+      "width": 2,
+      "dash": "solid",
+      "count": 1,
+      "label": ""
+    },
+    {
+      "id": "k12a259",
+      "a": [
+        "k4vkie"
+      ],
+      "b": [
+        "k9v8ma"
+      ],
+      "stroke": "auto",
+      "width": 2,
+      "dash": "solid",
+      "count": 1,
+      "label": ""
+    },
+    {
+      "id": "k13wlas",
+      "a": [
+        "k6gtyo"
+      ],
+      "b": [
+        "kakr0f"
+      ],
+      "stroke": "auto",
+      "width": 2,
+      "dash": "dashed",
+      "count": 1,
+      "label": ""
+    },
+    {
+      "id": "k14sdjz",
+      "a": [
+        "kiqm1z"
+      ],
+      "b": [
+        "ks08rk"
+      ],
+      "stroke": "auto",
+      "width": 2,
+      "dash": "solid",
+      "count": 1,
+      "label": "PGM"
+    },
+    {
+      "id": "k15nxoy",
+      "a": [
+        "kovl78"
+      ],
+      "b": [
+        "kwxmnc"
+      ],
+      "stroke": "#3596db",
+      "width": 2,
+      "dash": "solid",
+      "count": 1,
+      "label": ""
+    },
+    {
+      "id": "k16dgqj",
+      "a": [
+        "kjkyiy",
+        "kkgkqk",
+        "kp8pz1"
+      ],
+      "b": [
+        "kztu88",
+        "k107j8f",
+        "pending:k187smj"
+      ],
+      "stroke": "auto",
+      "width": 2,
+      "dash": "solid",
+      "count": 3,
+      "label": "AUX"
+    },
+    {
+      "id": "k17vnn1",
+      "a": [
+        "ku02a2"
+      ],
+      "b": [
+        "kztu88"
+      ],
+      "stroke": "auto",
+      "width": 2,
+      "dash": "solid",
+      "count": 1,
+      "label": ""
+    }
+  ],
+  "shapes": [
+    {
+      "id": "k1qm0hh",
+      "kind": "rect",
+      "x": 140,
+      "y": 440,
+      "stroke": "auto",
+      "width": 1.5,
+      "dash": "solid",
+      "fill": "none",
+      "w": 140,
+      "h": 80
+    }
+  ],
+  "grid": 20,
+  "showGrid": true,
+  "snap": true,
+  "defaults": {
+    "stroke": "auto",
+    "width": 2,
+    "dash": "solid"
+  }
+}
